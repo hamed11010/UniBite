@@ -134,3 +134,99 @@ Currently uses `sessionStorage` for:
 2. **Student Flow**: Browse restaurants → View menu → Add to cart → Checkout → Track order
 3. **Restaurant Flow**: View orders → Update status → Manage menu (future) → Adjust settings
 4. **Admin Flow**: Manage restaurants → Assign admins (future) → Force operations
+
+---
+
+## Backend Structure (`backend/`)
+
+NestJS backend application with PostgreSQL database.
+
+### Root Directory
+
+```
+backend/
+├── src/                    # Source code
+├── prisma/                 # Prisma schema and migrations
+├── test/                   # E2E tests
+├── docker-compose.yml      # PostgreSQL Docker configuration
+├── package.json           # Backend dependencies
+├── tsconfig.json          # TypeScript configuration
+├── prisma.config.ts       # Prisma configuration
+└── README.md              # Backend documentation
+```
+
+### Source Directory (`src/`)
+
+#### Authentication Module (`src/auth/`)
+- `auth.controller.ts` - Authentication endpoints (signup, login, logout, me)
+- `auth.service.ts` - Authentication business logic
+- `auth.module.ts` - Auth module configuration
+- `dto/` - Data transfer objects:
+  - `signup.dto.ts` - Student signup validation
+  - `login.dto.ts` - Login validation
+- `strategies/` - Passport strategies:
+  - `jwt.strategy.ts` - JWT token validation from cookies
+
+#### Users Module (`src/users/`)
+- `users.service.ts` - User CRUD operations
+- `users.module.ts` - Users module configuration
+- `dto/` - Data transfer objects:
+  - `create-user.dto.ts` - User creation validation
+
+#### Prisma Module (`src/prisma/`)
+- `prisma.service.ts` - Prisma Client service (database connection)
+- `prisma.module.ts` - Global Prisma module
+
+#### Common Utilities (`src/common/`)
+- `guards/` - Route guards:
+  - `jwt-auth.guard.ts` - JWT authentication guard
+  - `roles.guard.ts` - Role-based access control guard
+- `decorators/` - Custom decorators:
+  - `roles.decorator.ts` - `@Roles()` decorator for route protection
+
+#### Application Files
+- `app.module.ts` - Root application module
+- `main.ts` - Application entry point (bootstrap, CORS, cookies, validation)
+- `app.controller.ts` - Default controller
+- `app.service.ts` - Default service
+
+### Prisma Directory (`prisma/`)
+
+- `schema.prisma` - Database schema definition
+  - User model with roles (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN)
+- `migrations/` - Database migration files (generated)
+
+### Key Backend Features
+
+#### Authentication System
+- JWT-based authentication
+- httpOnly cookies for token storage
+- Password hashing with bcrypt
+- Role-based access control (RBAC)
+
+#### Database
+- PostgreSQL via Docker
+- Prisma ORM
+- UUID primary keys
+- Timestamps (createdAt)
+
+#### API Endpoints
+- `POST /auth/signup` - Student registration
+- `POST /auth/login` - User login (sets JWT cookie)
+- `POST /auth/logout` - Clear authentication cookie
+- `GET /auth/me` - Get current user (protected)
+
+#### Security
+- Input validation (class-validator)
+- CORS configuration
+- Secure cookie settings
+- Password hashing (bcrypt, 10 rounds)
+
+### Environment Variables
+
+Required in `backend/.env`:
+- `DATABASE_URL` - PostgreSQL connection string
+- `JWT_SECRET` - Secret key for JWT signing
+- `NODE_ENV` - Environment (development/production)
+- `PORT` - Server port (default: 3000)
+- `FRONTEND_URL` - Frontend origin for CORS

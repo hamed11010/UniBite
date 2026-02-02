@@ -1,98 +1,244 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# UniBite Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS backend for the UniBite food ordering platform.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Prerequisites
 
-## Description
+- Node.js (v18 or higher)
+- Docker and Docker Compose
+- npm or yarn
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Setup
 
-## Project setup
+### 1. Install Dependencies
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+### 2. Start PostgreSQL Database
+
+The project uses Docker Compose to run PostgreSQL. Start the database:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+docker-compose up -d
 ```
 
-## Run tests
+This will start a PostgreSQL container on port 5432 with:
+- Database: `unibite_db`
+- User: `unibite`
+- Password: `unibite_password`
+
+### 3. Environment Variables
+
+Create a `.env` file in the `backend/` directory:
+
+```env
+DATABASE_URL="postgresql://unibite:unibite_password@localhost:5432/unibite_db?schema=public"
+JWT_SECRET="your-secret-key-change-in-production"
+NODE_ENV="development"
+PORT=3000
+FRONTEND_URL="http://localhost:3001"
+```
+
+**Important:** Change `JWT_SECRET` to a strong, random string in production.
+
+### 4. Database Migrations
+
+Generate and apply Prisma migrations:
 
 ```bash
-# unit tests
-$ npm run test
+# Generate migration
+npx prisma migrate dev --name init
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Generate Prisma Client
+npx prisma generate
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 5. Run the Application
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Development mode
+npm run start:dev
+
+# Production mode
+npm run build
+npm run start:prod
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The API will be available at `http://localhost:3000`
 
-## Resources
+## Authentication
 
-Check out a few resources that may come in handy when working with NestJS:
+### How Cookies Work
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+The backend uses **httpOnly cookies** to store JWT tokens for security:
 
-## Support
+- **httpOnly**: Prevents JavaScript access (XSS protection)
+- **Secure**: Only sent over HTTPS in production
+- **SameSite**: Prevents CSRF attacks
+- **MaxAge**: 24 hours
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Authentication Endpoints
 
-## Stay in touch
+- `POST /auth/signup` - Student signup only
+- `POST /auth/login` - Login and receive JWT cookie
+- `POST /auth/logout` - Clear authentication cookie
+- `GET /auth/me` - Get current authenticated user (requires valid cookie)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### User Roles
+
+- `STUDENT` - Can sign up, browse restaurants, place orders
+- `RESTAURANT_ADMIN` - Manages restaurant menu and orders
+- `SUPER_ADMIN` - Platform administration
+
+## Project Structure
+
+```
+backend/
+├── src/
+│   ├── auth/              # Authentication module
+│   │   ├── dto/           # Data transfer objects
+│   │   ├── strategies/    # JWT strategy
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
+│   │   └── auth.module.ts
+│   ├── users/             # Users module
+│   │   ├── dto/
+│   │   ├── users.service.ts
+│   │   └── users.module.ts
+│   ├── prisma/            # Prisma service
+│   │   ├── prisma.service.ts
+│   │   └── prisma.module.ts
+│   ├── common/            # Shared utilities
+│   │   ├── guards/        # Authentication & role guards
+│   │   └── decorators/    # Custom decorators (e.g., @Roles)
+│   ├── app.module.ts
+│   └── main.ts
+└── prisma/
+    └── schema.prisma      # Database schema
+```
+
+## Database Management
+
+### View Database
+
+```bash
+npx prisma studio
+```
+
+### Reset Database (Development Only)
+
+```bash
+npx prisma migrate reset
+```
+
+### Create New Migration
+
+```bash
+npx prisma migrate dev --name migration_name
+```
+
+## API Documentation
+
+### Signup (Student Only)
+
+```bash
+POST /auth/signup
+Content-Type: application/json
+
+{
+  "email": "student@miuegypt.edu.eg",
+  "password": "password123"
+}
+```
+
+### Login
+
+```bash
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+
+Response: Sets httpOnly cookie with JWT token
+```
+
+### Get Current User
+
+```bash
+GET /auth/me
+Cookie: access_token=<jwt_token>
+
+Response:
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "role": "STUDENT"
+}
+```
+
+### Logout
+
+```bash
+POST /auth/logout
+Cookie: access_token=<jwt_token>
+
+Response: Clears authentication cookie
+```
+
+## Development
+
+### Code Style
+
+- TypeScript strict mode enabled
+- ESLint for code quality
+- Prettier for formatting
+
+### Testing
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Test coverage
+npm run test:cov
+```
+
+## Security Notes
+
+- Passwords are hashed using bcrypt (10 rounds)
+- JWT tokens stored in httpOnly cookies (not localStorage)
+- CORS configured for frontend origin
+- Input validation using class-validator
+- Role-based access control (RBAC) via guards
+
+## Troubleshooting
+
+### Database Connection Issues
+
+1. Ensure Docker is running
+2. Check if PostgreSQL container is up: `docker ps`
+3. Verify DATABASE_URL in `.env` matches docker-compose.yml
+
+### Prisma Client Not Found
+
+Run: `npx prisma generate`
+
+### Migration Issues
+
+Reset and reapply:
+```bash
+npx prisma migrate reset
+npx prisma migrate dev
+```
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT

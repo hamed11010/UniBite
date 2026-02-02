@@ -459,3 +459,103 @@ Improve trust, safety, and accountability by adding a student-facing restaurant 
 - Students never see internal stock or sensitive admin data—only high-level availability and the reporting UI.
 - Trust & safety automation (auto-disabling restaurants, large-scale moderation) is described in UI text but not implemented.
 - Onboarding avoids collecting any sensitive ID documents; responsibility is acknowledged via checkbox only.
+
+## Prompt 8
+
+**What was requested:**
+Implement Backend Phase 1: Production-grade authentication system with:
+1. **Prisma & Database Setup:**
+   - Install and initialize Prisma
+   - Create User model with UUID, email (unique), password (hashed), role enum (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN), createdAt
+   - Use Prisma migrations (not db push)
+2. **Authentication Implementation:**
+   - Create auth and users modules with clean separation
+   - Use bcrypt for password hashing
+   - JWT access tokens stored in httpOnly cookies
+   - Secure cookie settings (Secure-ready, SameSite aware)
+3. **Required Endpoints:**
+   - POST /auth/signup (student signup only)
+   - POST /auth/login (validate credentials, issue JWT cookie)
+   - POST /auth/logout (clear cookie)
+   - GET /auth/me (returns current user, requires valid cookie)
+4. **Authorization & Guards:**
+   - Authentication Guard (JWT)
+   - Role Guard (RBAC)
+   - Reusable guards with decorators for roles
+5. **Project Structure:**
+   - Clean folder structure: auth/, users/, prisma/, common/guards/, common/decorators/
+6. **Documentation:**
+   - Update backend/README.md with setup, Docker, migrations, cookies
+   - Append backend structure to PROJECT_STRUCTURE.md
+   - Add Prompt 8 to PROMPT_LOG.md
+
+**What was implemented:**
+- **Prisma Setup:**
+  - Installed Prisma and Prisma Client
+  - Initialized Prisma with PostgreSQL datasource
+  - Created User model with all required fields and Role enum
+  - Configured Prisma service module (global)
+- **Users Module:**
+  - UsersService with create, findByEmail, findById methods
+  - CreateUserDto with validation (email, password min 8 chars)
+  - Password hashing with bcrypt (10 rounds)
+  - Email uniqueness validation
+- **Authentication Module:**
+  - AuthService with signup (student only), login, validateUser methods
+  - AuthController with all 4 required endpoints
+  - JWT strategy for Passport (extracts token from httpOnly cookies)
+  - SignupDto and LoginDto with class-validator
+  - JWT tokens signed with configurable secret
+- **Guards & Authorization:**
+  - JwtAuthGuard extends Passport AuthGuard
+  - RolesGuard for role-based access control
+  - @Roles() decorator for route protection
+  - Guards are reusable and composable
+- **Cookie Configuration:**
+  - httpOnly cookies for JWT storage
+  - Secure flag for production
+  - SameSite: 'strict' for CSRF protection
+  - 24-hour expiration
+- **Application Configuration:**
+  - Updated main.ts with CORS, cookie-parser, ValidationPipe
+  - Updated app.module.ts to import PrismaModule, AuthModule, UsersModule
+  - Environment variable support (DATABASE_URL, JWT_SECRET, etc.)
+
+**Files touched:**
+- `backend/package.json` - Added dependencies: @prisma/client, prisma, @nestjs/jwt, @nestjs/passport, passport, passport-jwt, bcrypt, cookie-parser, class-validator, class-transformer, and dev types
+- `backend/prisma/schema.prisma` - Created User model with Role enum
+- `backend/prisma.config.ts` - Prisma configuration (generated, updated DATABASE_URL)
+- `backend/src/prisma/prisma.service.ts` - Prisma Client service with lifecycle hooks
+- `backend/src/prisma/prisma.module.ts` - Global Prisma module
+- `backend/src/users/users.service.ts` - User CRUD operations with password hashing
+- `backend/src/users/users.module.ts` - Users module
+- `backend/src/users/dto/create-user.dto.ts` - User creation DTO
+- `backend/src/auth/auth.service.ts` - Authentication business logic
+- `backend/src/auth/auth.controller.ts` - Auth endpoints (signup, login, logout, me)
+- `backend/src/auth/auth.module.ts` - Auth module with JWT configuration
+- `backend/src/auth/dto/signup.dto.ts` - Signup validation DTO
+- `backend/src/auth/dto/login.dto.ts` - Login validation DTO
+- `backend/src/auth/strategies/jwt.strategy.ts` - Passport JWT strategy (cookie-based)
+- `backend/src/common/guards/jwt-auth.guard.ts` - JWT authentication guard
+- `backend/src/common/guards/roles.guard.ts` - Role-based access control guard
+- `backend/src/common/decorators/roles.decorator.ts` - @Roles() decorator
+- `backend/src/main.ts` - Added CORS, cookie-parser, ValidationPipe
+- `backend/src/app.module.ts` - Imported PrismaModule, AuthModule, UsersModule
+- `backend/README.md` - Complete backend documentation (setup, Docker, migrations, cookies, API docs)
+- `PROJECT_STRUCTURE.md` - Appended backend structure section
+- `PROMPT_LOG.md` - Added Prompt 8 documentation
+
+**Notes / assumptions:**
+- Prisma 7 uses prisma.config.ts for DATABASE_URL (not in schema.prisma)
+- JWT secret defaults to placeholder string - must be changed in production
+- Only students can sign up via /auth/signup endpoint
+- Restaurant admins and super admins must be created through other means (future implementation)
+- Cookie secure flag is set based on NODE_ENV (true in production, false in development)
+- CORS is configured for frontend origin (default: http://localhost:3001)
+- Password minimum length is 8 characters (enforced via DTO validation)
+- All endpoints use class-validator for input validation
+- Prisma migrations must be run manually: `npx prisma migrate dev`
+- Prisma Client must be generated: `npx prisma generate`
+- Database runs via Docker Compose (docker-compose.yml already existed)
+- No refresh token implementation yet (only access token)
+- Frontend is frozen and not modified in this phase
