@@ -1,0 +1,155 @@
+.container {
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.header {
+  background: white;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.backButton {
+  background: none;
+  color: #667eea;
+  font-size: 16px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #333;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.statusCard {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.statusBadge {
+  color: white;
+  padding: 16px 24px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: inline-block;
+}
+
+.estimatedTime {
+  font-size: 16px;
+  color: #666;
+  margin-top: 12px;
+}
+
+.calmMessage {
+  font-size: 16px;
+  color: #666;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+.pickupNote {
+  font-size: 18px;
+  color: #4CAF50;
+  font-weight: 600;
+  margin-top: 12px;
+}
+
+.orderDetails {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.restaurantName {
+  font-size: 16px;
+  color: #667eea;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.itemsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.orderItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.itemName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.itemQuantity {
+  font-size: 14px;
+  color: #666;
+}
+
+.itemComment {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.itemSauces {
+  font-size: 14px;
+  color: #666;
+}
+
+.itemPrice {
+  font-size: 16px;
+  color: #667eea;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 600;
+  padding-top: 16px;
+  border-top: 2px solid #e0e0e0;
+}
+
+.totalAmount {
+  font-size: 24px;
+  color: #667eea;
+}

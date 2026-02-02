@@ -1,0 +1,28 @@
+# dependencies
+.next/
+node_modules/
+vendor/
+.venv/
+venv/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# build output
+dist/
+build/
+out/
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
+
+# Docker
+docker-data/
