@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { signup } from '@/lib/api'
 import styles from '../login/auth.module.css'
 
 export default function SignupPage() {
@@ -11,41 +12,68 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [universityId, setUniversityId] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Get selected university from sessionStorage
+    if (typeof window !== 'undefined') {
+      const selected = sessionStorage.getItem('selectedUniversity')
+      if (!selected) {
+        // Redirect to university selection if no university selected
+        router.push('/')
+        return
+      }
+      setUniversityId(selected)
+    }
+  }, [router])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setLoading(true)
 
     // Basic validation
     if (!email || !password || !confirmPassword) {
       setError('Please fill in all fields')
+      setLoading(false)
       return
     }
 
-    if (!email.endsWith('@miuegypt.edu.eg')) {
-      setError('Only @miuegypt.edu.eg emails are allowed')
+    if (!universityId) {
+      setError('Please select a university first')
+      setLoading(false)
+      router.push('/')
       return
     }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match')
+      setLoading(false)
       return
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters')
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      setLoading(false)
       return
     }
 
-    // Mock signup - store user in sessionStorage
-    if (typeof window !== 'undefined') {
-      const mockUser = {
-        email,
-        role: 'student',
+    try {
+      // Call backend signup API
+      const result = await signup(email, password, universityId)
+      
+      // Store user info in sessionStorage for frontend state
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('user', JSON.stringify(result))
+        sessionStorage.setItem('isAuthenticated', 'true')
       }
-      sessionStorage.setItem('user', JSON.stringify(mockUser))
-      sessionStorage.setItem('isAuthenticated', 'true')
+      
       router.push('/student/home')
+    } catch (err: any) {
+      setError(err.message || 'Signup failed. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -97,8 +125,12 @@ export default function SignupPage() {
             />
           </div>
 
-          <button type="submit" className={styles.submitButton}>
-            Sign Up
+          <button 
+            type="submit" 
+            className={styles.submitButton}
+            disabled={loading}
+          >
+            {loading ? 'Signing up...' : 'Sign Up'}
           </button>
         </form>
 

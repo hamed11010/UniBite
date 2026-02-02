@@ -8,7 +8,11 @@ import { Role } from '@prisma/client';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createUserDto: CreateUserDto, role: Role = Role.STUDENT) {
+  async create(
+    createUserDto: CreateUserDto,
+    role: Role = Role.STUDENT,
+    universityId?: string,
+  ) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: createUserDto.email },
     });
@@ -24,11 +28,15 @@ export class UsersService {
         email: createUserDto.email,
         password: hashedPassword,
         role,
+        universityId: universityId || null,
+        isVerified: false,
       },
       select: {
         id: true,
         email: true,
         role: true,
+        universityId: true,
+        isVerified: true,
         createdAt: true,
       },
     });
@@ -47,6 +55,8 @@ export class UsersService {
         id: true,
         email: true,
         role: true,
+        universityId: true,
+        isVerified: true,
         createdAt: true,
       },
     });

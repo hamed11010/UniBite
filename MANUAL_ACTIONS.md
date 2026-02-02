@@ -165,9 +165,74 @@ When ready to connect to a backend:
 - Use HTTPS in production
 - Implement proper session management
 
+## Backend Setup (Phase 2A+)
+
+### Prisma Migrations
+
+After schema changes, create and apply migrations:
+
+```bash
+cd backend
+npx prisma migrate dev --name migration_name
+```
+
+**Important:** After adding the University model (Phase 2A), run:
+```bash
+npx prisma migrate dev --name add_university_model
+```
+
+This will:
+- Create a new migration file
+- Apply the migration to the database
+- Regenerate Prisma Client
+
+### Generate Prisma Client
+
+After schema changes or migrations:
+
+```bash
+cd backend
+npx prisma generate
+```
+
+### Backend Restart
+
+After migrations or code changes:
+
+```bash
+cd backend
+# Stop the server (Ctrl+C if running)
+npm run start:dev
+```
+
+### Environment Variables
+
+Backend requires `.env` file in `backend/` directory:
+
+```env
+DATABASE_URL="postgresql://unibite:unibite_password@localhost:5432/unibite_db?schema=public"
+JWT_SECRET="your-secret-key-change-in-production"
+NODE_ENV="development"
+PORT=3000
+FRONTEND_URL="http://localhost:3001"
+```
+
+**Note:** No secrets should be committed to version control. `.env` is already in `.gitignore`.
+
+### Frontend API Configuration
+
+Frontend uses `NEXT_PUBLIC_API_URL` environment variable (optional):
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+If not set, defaults to `http://localhost:3000`.
+
 ## Support
 
 For issues or questions:
 1. Check the `PROMPT_LOG.md` for implementation details
 2. Review `PROJECT_STRUCTURE.md` for code organization
 3. Check Next.js documentation: https://nextjs.org/docs
+4. Check NestJS documentation: https://docs.nestjs.com

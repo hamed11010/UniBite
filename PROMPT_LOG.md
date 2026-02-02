@@ -559,3 +559,94 @@ Implement Backend Phase 1: Production-grade authentication system with:
 - Database runs via Docker Compose (docker-compose.yml already existed)
 - No refresh token implementation yet (only access token)
 - Frontend is frozen and not modified in this phase
+
+## Prompt 8 (Phase 2A) - Dynamic University System
+
+**What was requested:**
+Implement a fully dynamic University system where:
+1. **Prisma Schema Updates:**
+   - Add University model with id, name, allowedEmailDomains (array), isActive, createdAt
+   - Add relations: users, restaurants (for future)
+   - Extend User model: add universityId (optional), university relation, isVerified (default false)
+2. **Backend - University Module:**
+   - Create university module with service, controller, DTOs
+   - Super Admin only endpoints: create, update, enable/disable, list all
+   - Public endpoint: get active universities only (for frontend)
+3. **Update Signup Logic:**
+   - Require universityId in signup request
+   - Validate university exists and is active
+   - Validate email domain matches university's allowedEmailDomains
+   - Set isVerified = false by default
+4. **Frontend Updates:**
+   - University selection page: fetch from backend, remove hardcoded universities
+   - Signup page: include universityId, validate against selected university
+5. **Documentation:**
+   - Update PROJECT_STRUCTURE.md with University module
+   - Update PROMPT_LOG.md
+   - Update MANUAL_ACTIONS.md with migration steps
+
+**What was implemented:**
+- **Prisma Schema:**
+  - Added University model with all required fields and PostgreSQL array for allowedEmailDomains
+  - Extended User model with universityId (optional), university relation, isVerified field
+  - Added Restaurant model placeholder for future use
+  - All relations properly configured
+- **University Module:**
+  - UniversityService with create, findAll, findActive, findOne, update, validateEmailDomain methods
+  - UniversityController with:
+    - Public: GET /university/active (no auth required)
+    - Super Admin: POST /university, GET /university, GET /university/:id, PUT /university/:id, PUT /university/:id/status
+  - DTOs: CreateUniversityDto, UpdateUniversityDto with validation
+  - Email domain validation (must start with @)
+- **Signup Logic Updates:**
+  - SignupDto now requires universityId (UUID validation)
+  - AuthService validates university exists and is active
+  - Email domain validation against university's allowedEmailDomains array
+  - UsersService.create accepts optional universityId parameter
+  - isVerified set to false by default
+- **Frontend Updates:**
+  - Created lib/api.ts with API utility functions (fetchActiveUniversities, signup, login, etc.)
+  - Updated app/page.tsx to fetch universities from backend dynamically
+  - Removed hardcoded MIU university
+  - Shows "Universities coming soon" if no universities exist
+  - Updated app/auth/signup/page.tsx to:
+    - Get universityId from sessionStorage
+    - Call backend signup API with universityId
+    - Handle errors from backend validation
+    - Redirect to university selection if no university selected
+- **Module Integration:**
+  - Added UniversityModule to AppModule imports
+  - Added UniversityModule to AuthModule imports (for validation)
+
+**Files touched:**
+- `backend/prisma/schema.prisma` - Added University model, extended User model, added Restaurant placeholder
+- `backend/src/university/university.service.ts` - University CRUD operations and email domain validation
+- `backend/src/university/university.controller.ts` - University endpoints (public + Super Admin)
+- `backend/src/university/university.module.ts` - University module
+- `backend/src/university/dto/create-university.dto.ts` - University creation DTO
+- `backend/src/university/dto/update-university.dto.ts` - University update DTO
+- `backend/src/auth/dto/signup.dto.ts` - Added universityId field (UUID validation)
+- `backend/src/auth/auth.service.ts` - Added university validation and email domain checking
+- `backend/src/auth/auth.module.ts` - Added UniversityModule import
+- `backend/src/users/users.service.ts` - Updated create method to accept universityId, set isVerified
+- `backend/src/app.module.ts` - Added UniversityModule import
+- `lib/api.ts` - New API utility file for backend communication
+- `app/page.tsx` - Updated to fetch universities from backend, removed hardcoded MIU
+- `app/auth/signup/page.tsx` - Updated to use backend API, include universityId
+- `PROJECT_STRUCTURE.md` - Added University module documentation, updated API endpoints
+- `PROMPT_LOG.md` - Added Prompt 8 (Phase 2A) documentation
+
+**Notes / assumptions:**
+- Prisma migration must be created and applied: `npx prisma migrate dev --name add_university_model`
+- Email domains in allowedEmailDomains must start with @ (e.g., "@miuegypt.edu.eg")
+- University validation happens server-side - frontend checks are UX only
+- Students must select a university before signing up (stored in sessionStorage)
+- SUPER_ADMIN users may have universityId = null (not enforced yet)
+- RESTAURANT_ADMIN will belong to a university (used in future phases)
+- No email verification logic implemented yet (isVerified field exists but not used)
+- Frontend API calls use credentials: 'include' for cookie-based auth
+- API_BASE_URL defaults to http://localhost:3000, can be overridden with NEXT_PUBLIC_API_URL
+- University selection page redirects to login after selection (existing flow preserved)
+- Signup page redirects to university selection if no university selected
+- All Super Admin endpoints protected with @Roles(Role.SUPER_ADMIN) guard
+- Public /university/active endpoint returns only active universities, sorted by name

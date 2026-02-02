@@ -55,6 +55,7 @@ Next.js App Router structure. Each folder represents a route.
 Shared utilities and mock data.
 
 - `mockData.ts` - Mock data for restaurants, products, orders, and TypeScript interfaces
+- `api.ts` - API utility functions for backend communication (universities, auth)
 
 ## Public Directory (`public/`)
 
@@ -168,10 +169,18 @@ backend/
   - `jwt.strategy.ts` - JWT token validation from cookies
 
 #### Users Module (`src/users/`)
-- `users.service.ts` - User CRUD operations
+- `users.service.ts` - User CRUD operations with password hashing
 - `users.module.ts` - Users module configuration
 - `dto/` - Data transfer objects:
   - `create-user.dto.ts` - User creation validation
+
+#### University Module (`src/university/`)
+- `university.service.ts` - University CRUD operations and email domain validation
+- `university.controller.ts` - University endpoints (public active list, Super Admin management)
+- `university.module.ts` - University module configuration
+- `dto/` - Data transfer objects:
+  - `create-university.dto.ts` - University creation validation
+  - `update-university.dto.ts` - University update validation
 
 #### Prisma Module (`src/prisma/`)
 - `prisma.service.ts` - Prisma Client service (database connection)
@@ -193,7 +202,9 @@ backend/
 ### Prisma Directory (`prisma/`)
 
 - `schema.prisma` - Database schema definition
-  - User model with roles (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN)
+  - User model with roles (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN), universityId, isVerified
+  - University model with name, allowedEmailDomains (array), isActive
+  - Restaurant model (placeholder for future)
 - `migrations/` - Database migration files (generated)
 
 ### Key Backend Features
@@ -211,10 +222,22 @@ backend/
 - Timestamps (createdAt)
 
 #### API Endpoints
-- `POST /auth/signup` - Student registration
+
+**Authentication:**
+- `POST /auth/signup` - Student registration (requires universityId)
 - `POST /auth/login` - User login (sets JWT cookie)
 - `POST /auth/logout` - Clear authentication cookie
 - `GET /auth/me` - Get current user (protected)
+
+**University (Public):**
+- `GET /university/active` - Get active universities (no auth required)
+
+**University (Super Admin Only):**
+- `POST /university` - Create university
+- `GET /university` - List all universities (with optional includeInactive query)
+- `GET /university/:id` - Get single university
+- `PUT /university/:id` - Update university
+- `PUT /university/:id/status` - Enable/disable university
 
 #### Security
 - Input validation (class-validator)
