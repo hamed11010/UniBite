@@ -1,4 +1,10 @@
-import { IsString, IsArray, ArrayMinSize, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  ArrayMinSize,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
 export class UpdateUniversityDto {
   @IsString()

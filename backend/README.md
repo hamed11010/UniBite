@@ -25,6 +25,7 @@ docker-compose up -d
 ```
 
 This will start a PostgreSQL container on port 5432 with:
+
 - Database: `unibite_db`
 - User: `unibite`
 - Password: `unibite_password`
@@ -234,6 +235,7 @@ Run: `npx prisma generate`
 ### Migration Issues
 
 Reset and reapply:
+
 ```bash
 npx prisma migrate reset
 npx prisma migrate dev

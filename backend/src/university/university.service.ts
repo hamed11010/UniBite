@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
@@ -9,10 +13,12 @@ export class UniversityService {
 
   async create(createUniversityDto: CreateUniversityDto) {
     // Validate email domains format
-    const domains = createUniversityDto.allowedEmailDomains.map(domain => {
+    const domains = createUniversityDto.allowedEmailDomains.map((domain) => {
       const trimmed = domain.trim();
       if (!trimmed.startsWith('@')) {
-        throw new BadRequestException(`Email domain must start with @: ${trimmed}`);
+        throw new BadRequestException(
+          `Email domain must start with @: ${trimmed}`,
+        );
       }
       return trimmed;
     });
@@ -34,7 +40,7 @@ export class UniversityService {
 
   async findAll(includeInactive = false) {
     const where = includeInactive ? {} : { isActive: true };
-    
+
     return this.prisma.university.findMany({
       where,
       select: {
@@ -96,10 +102,12 @@ export class UniversityService {
 
     if (updateUniversityDto.allowedEmailDomains !== undefined) {
       // Validate email domains format
-      const domains = updateUniversityDto.allowedEmailDomains.map(domain => {
+      const domains = updateUniversityDto.allowedEmailDomains.map((domain) => {
         const trimmed = domain.trim();
         if (!trimmed.startsWith('@')) {
-          throw new BadRequestException(`Email domain must start with @: ${trimmed}`);
+          throw new BadRequestException(
+            `Email domain must start with @: ${trimmed}`,
+          );
         }
         return trimmed;
       });
@@ -123,9 +131,12 @@ export class UniversityService {
     });
   }
 
-  async validateEmailDomain(universityId: string, email: string): Promise<boolean> {
+  async validateEmailDomain(
+    universityId: string,
+    email: string,
+  ): Promise<boolean> {
     const university = await this.findOne(universityId);
-    
+
     if (!university.isActive) {
       throw new BadRequestException('University is not active');
     }
