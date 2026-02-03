@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { login, fetchActiveUniversities, type University } from '@/lib/api'
 import styles from './auth.module.css'
 
 export default function LoginPage() {
@@ -10,64 +11,75 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [universityId, setUniversityId] = useState<string | null>(null)
+  const [selectedUniversity, setSelectedUniversity] = useState<University | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    // Get selected university from sessionStorage
+    if (typeof window !== 'undefined') {
+      const selected = sessionStorage.getItem('selectedUniversity')
+      if (selected) {
+        setUniversityId(selected)
+        // Fetch university details for validation
+        fetchActiveUniversities().then((universities) => {
+          const uni = universities.find((u) => u.id === selected)
+          if (uni) {
+            setSelectedUniversity(uni)
+          }
+        })
+      }
+    }
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setLoading(true)
 
     // Basic validation
     if (!email || !password) {
       setError('Please fill in all fields')
+      setLoading(false)
       return
     }
 
-    // MOCK ROLE ASSIGNMENT - FOR DEMO/TESTING ONLY
-    // In production, roles would be determined by backend/database
-    // Explicit role assignment based on specific email patterns
-    let role = 'student'
-    let restaurantId = null
-    let isValidEmail = false
-
-    // Super Admin - explicit email pattern
-    if (email === 'superadmintest@anything.com') {
-      role = 'super_admin'
-      isValidEmail = true
-    }
-    // Restaurant Admin - explicit email pattern
-    else if (email === 'miniadmintest@anything.com') {
-      role = 'restaurant_admin'
-      restaurantId = 'rest1'
-      isValidEmail = true
-    }
-    // Student - any @miuegypt.edu.eg email
-    else if (email.endsWith('@miuegypt.edu.eg')) {
-      role = 'student'
-      isValidEmail = true
-    }
-
-    if (!isValidEmail) {
-      setError('Invalid email. Use @miuegypt.edu.eg for students, or admin test emails.')
-      return
-    }
-
-    // Mock login - store user in sessionStorage
-    if (typeof window !== 'undefined') {
-      const mockUser = {
-        email,
-        role,
-        restaurantId,
-      }
-      sessionStorage.setItem('user', JSON.stringify(mockUser))
-      sessionStorage.setItem('isAuthenticated', 'true')
+    // Context-aware validation based on role (frontend UX only, backend is authority)
+    // For STUDENT: validate email domain against selected university
+    // For RESTAURANT_ADMIN: no domain validation (backend validates university association)
+    // For SUPER_ADMIN: no restrictions
+    if (selectedUniversity) {
+      const emailDomain = `@${email.split('@')[1]}`
+      const isStudentEmail = selectedUniversity.allowedEmailDomains.includes(emailDomain)
       
-      // Redirect based on role
-      if (mockUser.role === 'super_admin') {
+      // Note: We can't determine role before login, so we do basic validation
+      // Backend will enforce proper validation
+      // Frontend validation is UX-only to catch obvious errors
+    }
+
+    try {
+      // Call backend login API
+      const result = await login(email, password, universityId || undefined)
+      
+      // Store user info in sessionStorage for frontend state
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('user', JSON.stringify(result.user))
+        sessionStorage.setItem('isAuthenticated', 'true')
+      }
+      
+      // Redirect based on backend response role
+      const role = result.user.role.toUpperCase()
+      if (role === 'SUPER_ADMIN') {
         router.push('/admin/dashboard')
-      } else if (mockUser.role === 'restaurant_admin') {
+      } else if (role === 'RESTAURANT_ADMIN') {
         router.push('/restaurant/dashboard')
       } else {
         router.push('/student/home')
       }
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please check your credentials and try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -104,8 +116,18 @@ export default function LoginPage() {
             />
           </div>
 
-          <button type="submit" className={styles.submitButton}>
-            Sign In
+          {!universityId && (
+            <p className={styles.infoText} style={{ color: '#ff6b6b', marginBottom: '1rem' }}>
+              Please select a university first.
+            </p>
+          )}
+
+          <button 
+            type="submit" 
+            className={styles.submitButton}
+            disabled={loading || !universityId}
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 

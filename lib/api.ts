@@ -58,7 +58,8 @@ export async function signup(
 export async function login(
   email: string,
   password: string,
-): Promise<{ user: { id: string; email: string; role: string } }> {
+  universityId?: string,
+): Promise<{ user: { id: string; email: string; role: string; universityId?: string } }> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
@@ -68,6 +69,7 @@ export async function login(
     body: JSON.stringify({
       email,
       password,
+      ...(universityId && { universityId }),
     }),
   });
 

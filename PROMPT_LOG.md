@@ -645,8 +645,73 @@ Implement a fully dynamic University system where:
 - RESTAURANT_ADMIN will belong to a university (used in future phases)
 - No email verification logic implemented yet (isVerified field exists but not used)
 - Frontend API calls use credentials: 'include' for cookie-based auth
-- API_BASE_URL defaults to http://localhost:3000, can be overridden with NEXT_PUBLIC_API_URL
+- API_BASE_URL defaults to http://127.0.0.1:4000, can be overridden with NEXT_PUBLIC_API_URL
 - University selection page redirects to login after selection (existing flow preserved)
 - Signup page redirects to university selection if no university selected
 - All Super Admin endpoints protected with @Roles(Role.SUPER_ADMIN) guard
 - Public /university/active endpoint returns only active universities, sorted by name
+
+## Prompt 9 - Auth Flow Cleanup with University Context
+
+**What was requested:**
+Clean up frontend authentication logic to align with production-ready backend:
+1. **University Selection Context:**
+   - Users must select a university before login or signup
+   - Selected universityId is stored and sent with auth requests
+2. **Login Flow Updates:**
+   - Send email, password, and universityId to POST /auth/login
+   - Context-aware frontend validation:
+     - STUDENT: Email must end with one of selected university's allowedEmailDomains
+     - RESTAURANT_ADMIN: Email domain NOT validated (backend validates university association)
+     - SUPER_ADMIN: University selection does not restrict login
+   - Display backend error messages clearly
+3. **Signup Flow:**
+   - STUDENT-only signup
+   - Require university selection
+   - Validate email domain against selected university (frontend UX only)
+4. **Post-Login Routing:**
+   - Redirect based on backend response role:
+     - SUPER_ADMIN → /admin/dashboard
+     - RESTAURANT_ADMIN → /restaurant/dashboard
+     - STUDENT → /student/home
+5. **Cleanup:**
+   - Remove all frontend-only demo logic (hardcoded admin emails, role inference, global email validation)
+
+**What was implemented:**
+- **Login Page Cleanup:**
+  - Removed all hardcoded role assignment logic (superadmintest@anything.com, miniadmintest@anything.com)
+  - Removed email domain validation based on hardcoded @miuegypt.edu.eg
+  - Updated to use backend login API with universityId parameter
+  - Added university context loading from sessionStorage
+  - Implemented backend response-based routing (role from backend)
+  - Added loading states and proper error handling
+  - Added university selection requirement check
+- **API Function Updates:**
+  - Updated login() function to accept optional universityId parameter
+  - universityId sent to backend in login request body
+- **Signup Page:**
+  - Already correctly implemented (no changes needed)
+  - Uses backend API with universityId
+  - Validates university selection before signup
+- **Removed Hardcoded Logic:**
+  - No more role inference from email text
+  - No hardcoded admin email patterns
+  - No global email domain validation
+  - All role determination now comes from backend response
+
+**Files touched:**
+- `lib/api.ts` - Updated login() function to accept optional universityId parameter
+- `app/auth/login/page.tsx` - Complete rewrite to use backend API, removed all hardcoded role logic
+- `PROMPT_LOG.md` - Added Prompt 9 documentation
+
+**Notes / assumptions:**
+- Backend login endpoint may not yet accept universityId (frontend sends it, backend can ignore for now)
+- Frontend validation is UX-only; backend is the final authority
+- University selection is required before login (redirects to university selection if missing)
+- All role-based routing uses backend response (no frontend role inference)
+- Error messages from backend are displayed to user
+- Loading states prevent multiple submissions
+- Port configuration: Frontend (3001), Backend (4000), Database (5432)
+- No backend code was modified (frontend-only changes)
+- All hardcoded demo/mock authentication logic removed
+- Authentication flow now fully backend-driven

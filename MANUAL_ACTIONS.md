@@ -40,7 +40,7 @@ Currently, the application uses mock data stored in `sessionStorage`. No environ
 npm run dev
 ```
 
-The application will be available at `http://localhost:3000`
+The application will be available at `http://localhost:3001`
 
 ### Building for Production
 
@@ -51,25 +51,25 @@ npm start
 
 ## Testing Different User Roles
 
-**Note:** Role assignment is explicit and based on specific email patterns (MOCK/DEMO ONLY).
+**Note:** Authentication is now fully backend-driven. Roles are determined by the backend database.
 
 ### Student Account
-- Use any email ending with `@miuegypt.edu.eg` (e.g., `userseed@miuegypt.edu.eg`, `student@miuegypt.edu.eg`)
-- Password can be anything (mock authentication)
-- Can sign up via the signup page
-- Will be redirected to `/student/home`
+- Must select a university first
+- Email must match one of the selected university's allowed email domains
+- Can sign up via the signup page (STUDENT role only)
+- Will be redirected to `/student/home` after login
 
 ### Restaurant Admin Account
-- **Exact email:** `miniadmintest@anything.com`
-- Password can be anything (mock authentication)
-- **Cannot sign up** - must use login page
-- Will be redirected to `/restaurant/dashboard`
-- Assigned to restaurant ID "rest1" by default
+- Must select a university first
+- Email domain validation is not enforced (backend validates university association)
+- **Cannot sign up** - must be created by Super Admin
+- Must use login page
+- Will be redirected to `/restaurant/dashboard` after login
 
 ### Super Admin Account
-- **Exact email:** `superadmintest@anything.com`
-- Password can be anything (mock authentication)
-- **Cannot sign up** - must use login page
+- University selection does not restrict login (can select any university)
+- **Cannot sign up** - must be created manually in database
+- Must use login page
 - Will be redirected to `/admin/dashboard` (Super Admin Dashboard)
 - Has access to overview statistics and full restaurant management
 
@@ -90,27 +90,18 @@ npm start
 - ✅ Service worker (Next.js handles this automatically in production build)
 - ✅ HTTPS (required for PWA, use localhost for development)
 
-## Backend Integration (Future)
+## Port Configuration (Important)
 
-When ready to connect to a backend:
+The application uses specific ports to avoid conflicts:
 
-1. **API Configuration**
-   - Update `lib/mockData.ts` to use API calls instead of mock data
-   - Create API utility functions in `lib/api.ts` or similar
-   - Replace `sessionStorage` calls with API requests
+- **Frontend (Next.js):** `http://localhost:3001`
+- **Backend (NestJS API):** `http://localhost:4000`
+- **Database (PostgreSQL):** `localhost:5432` (Docker)
 
-2. **Authentication**
-   - Replace mock authentication in `app/auth/login/page.tsx` and `app/auth/signup/page.tsx`
-   - Implement JWT token storage (consider using httpOnly cookies for security)
-   - Add token refresh logic
-
-3. **Real-time Updates**
-   - Replace setTimeout-based order status updates with WebSocket connection
-   - Or implement polling mechanism for order status
-
-4. **State Management**
-   - Consider adding a state management library (Redux, Zustand, etc.) if needed
-   - Replace sessionStorage with proper state management
+These ports must be:
+- Used consistently across all configuration files
+- Reflected in `.env` files, frontend API calls, and CORS config
+- Documented in all relevant documentation
 
 ## Deployment Considerations
 
@@ -213,7 +204,7 @@ Backend requires `.env` file in `backend/` directory:
 DATABASE_URL="postgresql://unibite:unibite_password@localhost:5432/unibite_db?schema=public"
 JWT_SECRET="your-secret-key-change-in-production"
 NODE_ENV="development"
-PORT=3000
+PORT=4000
 FRONTEND_URL="http://localhost:3001"
 ```
 
@@ -224,10 +215,12 @@ FRONTEND_URL="http://localhost:3001"
 Frontend uses `NEXT_PUBLIC_API_URL` environment variable (optional):
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_API_URL=http://127.0.0.1:4000
 ```
 
-If not set, defaults to `http://localhost:3000`.
+If not set, defaults to `http://127.0.0.1:4000`.
+
+**Note:** Frontend runs on port 3001, backend API on port 4000. This separation is intentional.
 
 ## Support
 

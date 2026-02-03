@@ -251,5 +251,5 @@ Required in `backend/.env`:
 - `DATABASE_URL` - PostgreSQL connection string
 - `JWT_SECRET` - Secret key for JWT signing
 - `NODE_ENV` - Environment (development/production)
-- `PORT` - Server port (default: 3000)
+- `PORT` - Server port (default: 4000)
 - `FRONTEND_URL` - Frontend origin for CORS
