@@ -59,13 +59,31 @@ export default function PlatformAdminDashboard() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const isAuthenticated = sessionStorage.getItem('isAuthenticated')
-      const user = JSON.parse(sessionStorage.getItem('user') || '{}')
-      
-      if (!isAuthenticated || user.role !== 'super_admin') {
-        router.push('/auth/login')
-        return
-      }
+      const checkAuth = async () => {
+    try {
+    const res = await fetch('http://localhost:4000/auth/me', {
+      credentials: 'include',
+    })
+
+    if (!res.ok) {
+      router.push('/auth/login')
+      return
+    }
+
+    const data = await res.json()
+
+    if (data.role !== 'SUPER_ADMIN') {
+      router.push('/auth/login')
+      return
+    }
+  } catch {
+    router.push('/auth/login')
+    return
+  }
+}
+
+checkAuth()
+
 
       setRestaurants(mockRestaurants)
 
@@ -402,7 +420,8 @@ export default function PlatformAdminDashboard() {
                 <button
                   onClick={() => {
                     setShowAddForm(false)
-                    setNewRestaurant({ name: '', opensAt: '08:00', closesAt: '22:00', status: 'active', email: '', password: '', responsibleName: '', responsiblePhone: '' })
+                    setNewRestaurant({ name: '',   university: '',
+opensAt: '08:00', closesAt: '22:00', status: 'active', email: '', password: '', responsibleName: '', responsiblePhone: '' })
                   }}
                   className={styles.cancelButton}
                 >

@@ -1,4 +1,3 @@
-
 import {
   Injectable,
   UnauthorizedException,
@@ -52,6 +51,7 @@ export class AuthService {
       Role.STUDENT,
       signupDto.universityId,
     );
+
     return {
       id: user.id,
       email: user.email,
@@ -62,19 +62,29 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const user = await this.usersService.findByEmail(loginDto.email);
+    const { email, password, universityId } = loginDto;
 
+    const user = await this.usersService.findByEmail(email);
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
-
+    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+
+    // 🔐 University-based access control
+    if (user.role !== Role.SUPER_ADMIN) {
+      if (!universityId) {
+        throw new BadRequestException('University is required');
+      }
+
+      if (!user.universityId || user.universityId !== universityId) {
+        throw new UnauthorizedException(
+          'User does not belong to selected university',
+        );
+      }
     }
 
     const payload = {

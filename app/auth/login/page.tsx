@@ -45,28 +45,16 @@ export default function LoginPage() {
     }
 
     // Context-aware validation based on role (frontend UX only, backend is authority)
-    // For STUDENT: validate email domain against selected university
-    // For RESTAURANT_ADMIN: no domain validation (backend validates university association)
-    // For SUPER_ADMIN: no restrictions
     if (selectedUniversity) {
       const emailDomain = `@${email.split('@')[1]}`
       const isStudentEmail = selectedUniversity.allowedEmailDomains.includes(emailDomain)
-      
-      // Note: We can't determine role before login, so we do basic validation
-      // Backend will enforce proper validation
-      // Frontend validation is UX-only to catch obvious errors
+      // UX-only validation; backend enforces rules
     }
 
     try {
-      // Call backend login API
+      // Call backend login API (cookie-based auth)
       const result = await login(email, password, universityId || undefined)
-      
-      // Store user info in sessionStorage for frontend state
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('user', JSON.stringify(result.user))
-        sessionStorage.setItem('isAuthenticated', 'true')
-      }
-      
+
       // Redirect based on backend response role
       const role = result.user.role.toUpperCase()
       if (role === 'SUPER_ADMIN') {
