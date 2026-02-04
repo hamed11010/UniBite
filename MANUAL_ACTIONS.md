@@ -222,6 +222,23 @@ If not set, defaults to `http://127.0.0.1:4000`.
 
 **Note:** Frontend runs on port 3001, backend API on port 4000. This separation is intentional.
 
+### Authentication (Cookie-Based)
+
+The application uses **httpOnly cookies** for authentication:
+
+- **Login:** Sets JWT token in httpOnly cookie via `/auth/login`
+- **Auth Check:** Uses `/auth/me` endpoint to verify authentication
+- **Logout:** Clears cookie via `/auth/logout` endpoint
+- **No sessionStorage:** Authentication state is NOT stored in sessionStorage
+- **Cookie Persistence:** User stays logged in after page refresh
+
+**Important:**
+- Cookies are required for authentication to work
+- If experiencing auth issues, clear browser cookies and log in again
+- Backend must be running on port 4000 for auth to work
+- Frontend must be running on port 3001 (different port to avoid conflicts)
+- CORS is configured to allow credentials between frontend and backend
+
 ## Support
 
 For issues or questions:

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Order } from '@/lib/mockData'
+import { checkAuth, hasRole } from '@/lib/auth'
 import styles from './dashboard.module.css'
 
 interface Sauce {
@@ -43,15 +44,18 @@ export default function RestaurantDashboard() {
   const [reports, setReports] = useState<any[]>([])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuthenticated = sessionStorage.getItem('isAuthenticated')
-      const user = JSON.parse(sessionStorage.getItem('user') || '{}')
+    if (typeof window === 'undefined') return
+
+    // Cookie-based authentication check - single source of truth
+    const verifyAuth = async () => {
+      const user = await checkAuth()
       
-      if (!isAuthenticated || user.role !== 'restaurant_admin') {
+      if (!user || !hasRole(user, 'RESTAURANT_ADMIN')) {
         router.push('/auth/login')
         return
       }
 
+      // User is authenticated and has correct role - load dashboard data
       // Load orders
       let allOrders = JSON.parse(sessionStorage.getItem('orders') || '[]')
       
@@ -106,19 +110,21 @@ export default function RestaurantDashboard() {
         sessionStorage.setItem('orders', JSON.stringify(mockOrders))
       }
       
-      // Filter orders for this restaurant
+      // Filter orders for this restaurant (demo mode - using rest1 as default)
       const restaurantOrders = allOrders.filter(
-        (o: Order) => o.restaurantId === user.restaurantId || o.restaurantId === 'rest1'
+        (o: Order) => o.restaurantId === 'rest1'
       )
       setOrders(restaurantOrders)
 
       // Load reports for this restaurant (demo mode)
       const allReports = JSON.parse(sessionStorage.getItem('reports') || '[]')
       const restaurantReports = allReports.filter(
-        (r: any) => r.restaurantId === user.restaurantId || r.restaurantId === 'rest1'
+        (r: any) => r.restaurantId === 'rest1'
       )
       setReports(restaurantReports)
     }
+
+    verifyAuth()
   }, [router])
 
   const updateOrderStatus = (orderId: string, newStatus: any) => {
@@ -936,10 +942,9 @@ function SettingsTab() {
     setIsManualOverride(true)
     // Update restaurant status in sessionStorage for student view
     if (typeof window !== 'undefined') {
-      const user = JSON.parse(sessionStorage.getItem('user') || '{}')
       const restaurants = JSON.parse(sessionStorage.getItem('restaurants') || '[]')
       const updatedRestaurants = restaurants.map((r: any) =>
-        r.id === user.restaurantId || r.id === 'rest1'
+        r.id === 'rest1'
           ? { ...r, isOpen: checked, manualOverride: true }
           : r
       )

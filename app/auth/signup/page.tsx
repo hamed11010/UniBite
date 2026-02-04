@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { signup } from '@/lib/api'
+import { signup, login } from '@/lib/api'
 import styles from '../login/auth.module.css'
 
 export default function SignupPage() {
@@ -60,16 +60,21 @@ export default function SignupPage() {
     }
 
     try {
-      // Call backend signup API
-      const result = await signup(email, password, universityId)
+      // Call backend signup API (cookie is set automatically on login)
+      await signup(email, password, universityId)
       
-      // Store user info in sessionStorage for frontend state
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('user', JSON.stringify(result))
-        sessionStorage.setItem('isAuthenticated', 'true')
+      // After signup, automatically log in to set cookie
+      const loginResult = await login(email, password, universityId)
+      
+      // Redirect based on backend response role (should always be STUDENT for signup)
+      const role = loginResult.user.role.toUpperCase()
+      if (role === 'SUPER_ADMIN') {
+        router.push('/admin/dashboard')
+      } else if (role === 'RESTAURANT_ADMIN') {
+        router.push('/restaurant/dashboard')
+      } else {
+        router.push('/student/home')
       }
-      
-      router.push('/student/home')
     } catch (err: any) {
       setError(err.message || 'Signup failed. Please try again.')
     } finally {

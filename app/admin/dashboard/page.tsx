@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { mockRestaurants, Restaurant } from '@/lib/mockData'
+import { checkAuth, hasRole } from '@/lib/auth'
 import styles from './admin.module.css'
 
 export default function PlatformAdminDashboard() {
@@ -58,33 +59,18 @@ export default function PlatformAdminDashboard() {
   }, [restaurants, selectedRestaurantId])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const checkAuth = async () => {
-    try {
-    const res = await fetch('http://localhost:4000/auth/me', {
-      credentials: 'include',
-    })
+    if (typeof window === 'undefined') return
 
-    if (!res.ok) {
-      router.push('/auth/login')
-      return
-    }
+    // Cookie-based authentication check - single source of truth
+    const verifyAuth = async () => {
+      const user = await checkAuth()
+      
+      if (!user || !hasRole(user, 'SUPER_ADMIN')) {
+        router.push('/auth/login')
+        return
+      }
 
-    const data = await res.json()
-
-    if (data.role !== 'SUPER_ADMIN') {
-      router.push('/auth/login')
-      return
-    }
-  } catch {
-    router.push('/auth/login')
-    return
-  }
-}
-
-checkAuth()
-
-
+      // User is authenticated and has correct role - load dashboard data
       setRestaurants(mockRestaurants)
 
       // Load report overview (demo mode)
@@ -114,6 +100,8 @@ checkAuth()
       })
       setReportSummary(summary)
     }
+
+    verifyAuth()
   }, [router])
 
   const [responsibilityAccepted, setResponsibilityAccepted] = useState(false)

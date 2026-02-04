@@ -715,3 +715,65 @@ Clean up frontend authentication logic to align with production-ready backend:
 - No backend code was modified (frontend-only changes)
 - All hardcoded demo/mock authentication logic removed
 - Authentication flow now fully backend-driven
+
+## Prompt 10 - Auth Redirect Loop & Cookie-Only Cleanup
+
+**What was requested:**
+Fix critical redirect loop bug where SUPER_ADMIN dashboard would briefly render then immediately redirect back to /auth/login. Fully stabilize authentication using cookies only.
+
+**What was broken:**
+1. **Admin Dashboard Redirect Loop:**
+   - Broken indentation in useEffect causing auth check to run incorrectly
+   - Hardcoded API URL instead of using API utility
+   - Code structure caused multiple redirect attempts
+2. **SessionStorage Auth Dependencies:**
+   - Restaurant dashboard used sessionStorage for auth checks
+   - Student home used sessionStorage for auth checks
+   - Signup page stored auth state in sessionStorage (misleading)
+   - Multiple dashboards had conflicting auth mechanisms
+3. **Role Comparison Issues:**
+   - Restaurant dashboard used lowercase 'restaurant_admin' instead of 'RESTAURANT_ADMIN'
+   - Inconsistent role checking across dashboards
+
+**What was fixed:**
+- **Created Centralized Auth Utility (`lib/auth.ts`):**
+  - `checkAuth()` function uses `/auth/me` with cookie-based auth
+  - `hasRole()` helper for consistent role checking
+  - Single source of truth for authentication state
+- **Fixed Admin Dashboard:**
+  - Replaced broken hardcoded fetch with `checkAuth()` utility
+  - Fixed indentation and code structure
+  - Ensured auth check runs once and waits for response
+  - Proper role validation using `hasRole(user, 'SUPER_ADMIN')`
+- **Fixed Restaurant Dashboard:**
+  - Replaced sessionStorage auth with cookie-based `checkAuth()`
+  - Fixed role comparison to use 'RESTAURANT_ADMIN' (uppercase)
+  - Removed invalid `user.restaurantId` reference
+- **Fixed Student Home:**
+  - Replaced sessionStorage auth with cookie-based `checkAuth()`
+  - Updated logout to call backend `/auth/logout` endpoint
+  - Proper role validation using `hasRole(user, 'STUDENT')`
+- **Fixed Signup Flow:**
+  - Removed misleading sessionStorage auth storage
+  - After signup, automatically logs in to set cookie
+  - Uses cookie-based auth for redirect decisions
+
+**Files touched:**
+- `lib/auth.ts` - New centralized auth utility (checkAuth, hasRole)
+- `app/admin/dashboard/page.tsx` - Fixed broken auth check, removed hardcoded URL
+- `app/restaurant/dashboard/page.tsx` - Replaced sessionStorage with cookie-based auth
+- `app/student/home/page.tsx` - Replaced sessionStorage with cookie-based auth, fixed logout
+- `app/auth/signup/page.tsx` - Removed sessionStorage auth storage, added auto-login
+- `PROMPT_LOG.md` - Added Prompt 10 documentation
+
+**Notes / assumptions:**
+- All authentication now uses httpOnly cookies exclusively
+- `/auth/me` is the single source of truth for auth state
+- sessionStorage is only used for non-auth data (selectedUniversity, orders, reports, etc.)
+- Role comparisons use exact backend enum values: 'SUPER_ADMIN', 'RESTAURANT_ADMIN', 'STUDENT'
+- All dashboards use the same `checkAuth()` utility for consistency
+- Auth checks run once per page load in useEffect
+- Redirects only happen if auth fails or role doesn't match
+- Page refresh keeps user logged in (cookie persists)
+- Logout properly clears backend cookie via `/auth/logout` endpoint
+- Student pages (cart, order, restaurant menu) still use sessionStorage for auth but don't cause redirect loops (can be updated later for consistency)
