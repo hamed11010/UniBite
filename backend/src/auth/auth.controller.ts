@@ -18,42 +18,44 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('signup')
-  async signup(@Body() signupDto: SignupDto) {
+  signup(@Body() signupDto: SignupDto) {
     return this.authService.signup(signupDto);
   }
 
   @Post('login')
-  async login(@Body() loginDto: LoginDto, @Res() res: Response) {
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(loginDto);
 
-    // Set JWT in httpOnly cookie
+    // ✅ FIXED COOKIE CONFIG FOR LOCALHOST
     res.cookie('access_token', result.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: false,       // MUST be false on localhost
+      sameSite: 'lax',     // MUST be lax for cross-port
+      path: '/',
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
-    return res.json({
+    return {
       user: result.user,
-    });
+    };
   }
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  async logout(@Res() res: Response) {
+  logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('access_token', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      path: '/',
     });
 
-    return res.json({ message: 'Logged out successfully' });
+    return { message: 'Logged out successfully' };
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@Request() req) {
+  getMe(@Request() req) {
     return req.user;
   }
 }
