@@ -8,6 +8,19 @@ export interface University {
   allowedEmailDomains: string[];
   isActive: boolean;
   createdAt: string;
+  restaurantCount?: number;
+  userCount?: number;
+}
+
+export interface CreateUniversityDto {
+  name: string;
+  allowedEmailDomains: string[];
+}
+
+export interface UpdateUniversityDto {
+  name?: string;
+  allowedEmailDomains?: string[];
+  isActive?: boolean;
 }
 
 export async function fetchActiveUniversities(): Promise<University[]> {
@@ -111,4 +124,104 @@ export async function logout(): Promise<void> {
     },
     credentials: 'include', // Important for cookies
   });
+}
+
+// University management (Super Admin only)
+export async function fetchAllUniversities(includeInactive = false): Promise<University[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/university?includeInactive=${includeInactive}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include', // Important for cookies
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch universities');
+  }
+
+  return response.json();
+}
+
+export async function fetchUniversityById(id: string): Promise<University> {
+  const response = await fetch(`${API_BASE_URL}/university/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Important for cookies
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch university');
+  }
+
+  return response.json();
+}
+
+export async function createUniversity(
+  data: CreateUniversityDto,
+): Promise<University> {
+  const response = await fetch(`${API_BASE_URL}/university`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Important for cookies
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create university');
+  }
+
+  return response.json();
+}
+
+export async function updateUniversity(
+  id: string,
+  data: UpdateUniversityDto,
+): Promise<University> {
+  const response = await fetch(`${API_BASE_URL}/university/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Important for cookies
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update university');
+  }
+
+  return response.json();
+}
+
+export async function toggleUniversityStatus(
+  id: string,
+  isActive: boolean,
+): Promise<University> {
+  const response = await fetch(`${API_BASE_URL}/university/${id}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Important for cookies
+    body: JSON.stringify({ isActive }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update university status');
+  }
+
+  return response.json();
 }

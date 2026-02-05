@@ -34,21 +34,21 @@ export class UniversityController {
     return this.universityService.create(createUniversityDto);
   }
 
-  // Super Admin only - list all universities (active + inactive)
+  // Super Admin only - list all universities (active + inactive) with stats
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)
   async findAll(@Query('includeInactive') includeInactive?: string) {
     const include = includeInactive === 'true';
-    return this.universityService.findAll(include);
+    return this.universityService.findAllWithStats(include);
   }
 
-  // Super Admin only - get single university
+  // Super Admin only - get single university with stats
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.SUPER_ADMIN)
   async findOne(@Param('id') id: string) {
-    return this.universityService.findOne(id);
+    return this.universityService.findOneWithStats(id);
   }
 
   // Super Admin only - update university

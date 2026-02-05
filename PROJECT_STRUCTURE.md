@@ -107,20 +107,24 @@ Static assets served at the root URL.
 - Settings: Open/close toggle, working hours
 
 ### `/admin/dashboard`
-- View all restaurants
-- Add new restaurants
-- Remove restaurants
-- Force open/close restaurants
-- Restaurant admin assignment (placeholder)
+- University-first Super Admin dashboard
+- View all universities with stats (restaurant count, user count)
+- Select specific university or "All Universities"
+- Add new university (name + allowed email domains)
+- Enable/disable universities
+- University statistics (total universities, active universities, total restaurants, total users)
 
 ## State Management
 
-Currently uses `sessionStorage` for:
-- User authentication state
-- Selected university
+**Authentication:**
+- Uses httpOnly cookies exclusively (no sessionStorage for auth)
+- `/auth/me` is the single source of truth for auth state
+
+**SessionStorage (non-auth data only):**
+- Selected university (for UI state)
 - Shopping cart
 - Orders
-- User role and restaurant assignment
+- Reports (demo mode)
 
 ## Styling Approach
 
@@ -134,7 +138,7 @@ Currently uses `sessionStorage` for:
 1. **Authentication**: User selects university → logs in → role determined → redirected to appropriate dashboard
 2. **Student Flow**: Browse restaurants → View menu → Add to cart → Checkout → Track order
 3. **Restaurant Flow**: View orders → Update status → Manage menu (future) → Adjust settings
-4. **Admin Flow**: Manage restaurants → Assign admins (future) → Force operations
+4. **Admin Flow**: Manage universities → View stats → Add/Enable/Disable universities → (Restaurant management coming in future)
 
 ---
 
@@ -175,8 +179,8 @@ backend/
   - `create-user.dto.ts` - User creation validation
 
 #### University Module (`src/university/`)
-- `university.service.ts` - University CRUD operations and email domain validation
-- `university.controller.ts` - University endpoints (public active list, Super Admin management)
+- `university.service.ts` - University CRUD operations, email domain validation, and aggregated stats (restaurantCount, userCount)
+- `university.controller.ts` - University endpoints (public active list, Super Admin management with stats)
 - `university.module.ts` - University module configuration
 - `dto/` - Data transfer objects:
   - `create-university.dto.ts` - University creation validation
@@ -234,8 +238,8 @@ backend/
 
 **University (Super Admin Only):**
 - `POST /university` - Create university
-- `GET /university` - List all universities (with optional includeInactive query)
-- `GET /university/:id` - Get single university
+- `GET /university` - List all universities with stats (restaurantCount, userCount) (with optional includeInactive query)
+- `GET /university/:id` - Get single university with stats
 - `PUT /university/:id` - Update university
 - `PUT /university/:id/status` - Enable/disable university
 

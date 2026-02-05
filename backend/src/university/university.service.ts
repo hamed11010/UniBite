@@ -144,4 +144,71 @@ export class UniversityService {
     const emailDomain = `@${email.split('@')[1]}`;
     return university.allowedEmailDomains.includes(emailDomain);
   }
+
+  async findAllWithStats(includeInactive = false) {
+    const where = includeInactive ? {} : { isActive: true };
+
+    const universities = await this.prisma.university.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        allowedEmailDomains: true,
+        isActive: true,
+        createdAt: true,
+        _count: {
+          select: {
+            restaurants: true,
+            users: true,
+          },
+        },
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    });
+
+    return universities.map((uni) => ({
+      id: uni.id,
+      name: uni.name,
+      allowedEmailDomains: uni.allowedEmailDomains,
+      isActive: uni.isActive,
+      createdAt: uni.createdAt,
+      restaurantCount: uni._count.restaurants,
+      userCount: uni._count.users,
+    }));
+  }
+
+  async findOneWithStats(id: string) {
+    const university = await this.prisma.university.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        allowedEmailDomains: true,
+        isActive: true,
+        createdAt: true,
+        _count: {
+          select: {
+            restaurants: true,
+            users: true,
+          },
+        },
+      },
+    });
+
+    if (!university) {
+      throw new NotFoundException(`University with ID ${id} not found`);
+    }
+
+    return {
+      id: university.id,
+      name: university.name,
+      allowedEmailDomains: university.allowedEmailDomains,
+      isActive: university.isActive,
+      createdAt: university.createdAt,
+      restaurantCount: university._count.restaurants,
+      userCount: university._count.users,
+    };
+  }
 }

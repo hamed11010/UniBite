@@ -433,3 +433,139 @@
   font-weight: 600;
   border: 1px solid #90caf9;
 }
+
+.loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 18px;
+  color: #666;
+}
+
+.error {
+  background: #ffebee;
+  border: 2px solid #f44336;
+  border-radius: 8px;
+  padding: 12px;
+  color: #c62828;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.success {
+  background: #e8f5e9;
+  border: 2px solid #4CAF50;
+  border-radius: 8px;
+  padding: 12px;
+  color: #2e7d32;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.restaurantHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.statusBadge.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.statusBadge.inactive {
+  background: #999;
+  color: white;
+}
+
+.universityDetails {
+  margin-top: 12px;
+}
+
+.detailItem {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.6;
+}
+
+.detailItem strong {
+  color: #333;
+  margin-right: 8px;
+}
+
+.enableButton {
+  background: #4CAF50;
+}
+
+.enableButton:hover {
+  background: #45a049;
+}
+
+.disableButton {
+  background: #f44336;
+}
+
+.disableButton:hover {
+  background: #d32f2f;
+}
+
+.formTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.domainsSection {
+  margin-top: 16px;
+}
+
+.domainInput {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.domainInput .input {
+  flex: 1;
+}
+
+.addDomainButton {
+  padding: 8px 16px;
+  background: #667eea;
+  color: white;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  margin-top: 8px;
+}
+
+.addDomainButton:hover {
+  background: #5568d3;
+}
+
+.submitButton {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background 0.2s;
+  margin-top: 16px;
+}
+
+.submitButton:hover {
+  background: #5568d3;
+}

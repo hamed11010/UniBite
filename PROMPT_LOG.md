@@ -777,3 +777,81 @@ Fix critical redirect loop bug where SUPER_ADMIN dashboard would briefly render 
 - Page refresh keeps user logged in (cookie persists)
 - Logout properly clears backend cookie via `/auth/logout` endpoint
 - Student pages (cart, order, restaurant menu) still use sessionStorage for auth but don't cause redirect loops (can be updated later for consistency)
+
+## Prompt 11 - University-First Super Admin Dashboard
+
+**What was requested:**
+Refactor Super Admin dashboard to be university-first instead of restaurant-first:
+1. **Make Universities Primary Entity:**
+   - Default view: list all universities
+   - Allow selecting one university or "All Universities"
+   - Replace restaurant-first analytics with university-first analytics
+2. **Remove Mock Data:**
+   - Remove all mock restaurant and analytics data from Super Admin views
+   - Integrate fully with backend + database
+3. **University Management:**
+   - View all universities or a single university
+   - Add new university (name + allowed email domains)
+   - See restaurants and users belonging to a university
+   - See basic analytics scoped to a university
+4. **Backend Integration:**
+   - Ensure universities are first-class entities
+   - Add endpoints to fetch universities with aggregated stats
+   - Fetch restaurants by university
+   - Fetch user count by university
+
+**What was implemented:**
+- **Backend Enhancements:**
+  - Added `findAllWithStats()` method to UniversityService - returns universities with restaurant and user counts
+  - Added `findOneWithStats()` method to UniversityService - returns single university with stats
+  - Updated GET /university endpoint to return stats by default
+  - Updated GET /university/:id endpoint to return stats
+  - Stats include: restaurantCount, userCount (aggregated from relations)
+- **Frontend API Functions:**
+  - Added `fetchAllUniversities()` - fetches all universities with stats (Super Admin only)
+  - Added `fetchUniversityById()` - fetches single university with stats
+  - Added `createUniversity()` - creates new university
+  - Added `updateUniversity()` - updates university details
+  - Added `toggleUniversityStatus()` - enables/disables university
+  - Extended University interface to include restaurantCount and userCount
+- **Super Admin Dashboard Refactor:**
+  - Completely rewritten to be university-first
+  - Default view shows all universities with stats
+  - University selector dropdown (All Universities or specific university)
+  - University statistics cards: Total Universities, Active Universities, Total Restaurants, Total Users
+  - University list shows: name, allowed email domains, restaurant count, user count, created date, status
+  - Enable/Disable toggle for each university
+  - "Add University" form with:
+    - University name input
+    - Multiple email domain inputs (add/remove domains)
+    - Automatic @ prefix handling
+    - Validation (name required, at least one domain)
+  - Removed all mock data (mockRestaurants, mock stats, mock reports)
+  - All data now comes from backend API
+  - Newly created universities appear immediately after creation
+- **CSS Updates:**
+  - Added styles for: loading, success, error messages
+  - Added styles for: university details, domain inputs, form elements
+  - Added styles for: status badges (active/inactive), enable/disable buttons
+
+**Files touched:**
+- `backend/src/university/university.service.ts` - Added findAllWithStats() and findOneWithStats() methods
+- `backend/src/university/university.controller.ts` - Updated endpoints to use stats methods
+- `lib/api.ts` - Added university management API functions (fetchAllUniversities, fetchUniversityById, createUniversity, updateUniversity, toggleUniversityStatus)
+- `app/admin/dashboard/page.tsx` - Complete rewrite: university-first view, removed all mock data
+- `app/admin/dashboard/admin.module.css` - Added styles for new university form and display elements
+- `PROMPT_LOG.md` - Added Prompt 11 documentation
+
+**Notes / assumptions:**
+- Universities are now the primary entity in Super Admin dashboard
+- All statistics are calculated from database relations (restaurantCount, userCount)
+- University creation immediately refreshes the list and appears on public university selection page
+- Email domains are validated to start with @ (automatically added if missing)
+- Multiple email domains can be added per university
+- Enable/Disable toggle updates university isActive status
+- No mock data remains in Super Admin dashboard
+- All authentication uses cookie-based auth (no sessionStorage for auth)
+- Statistics are scoped to selected university or aggregated across all universities
+- Restaurant and user counts are real-time from database
+- Newly created universities are active by default
+- University selection page (public) automatically shows newly created active universities
