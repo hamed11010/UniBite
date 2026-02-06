@@ -5,7 +5,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -46,26 +45,27 @@ model User {
 }
 
 model Restaurant {
-  id                String   @id @default(uuid())
-  name              String
-  universityId      String
-  university        University @relation(fields: [universityId], references: [id])
-  responsibleName   String
-  responsiblePhone  String
-  createdAt         DateTime  @default(now())
+  id               String     @id @default(uuid())
+  name             String
+  universityId     String
+  university       University @relation(fields: [universityId], references: [id])
+  responsibleName  String
+  responsiblePhone String
+  createdAt        DateTime   @default(now())
 
   users      User[]
   categories Category[]
+  products   Product[]
 
   @@map("restaurants")
 }
 
 model Category {
-  id           String   @id @default(uuid())
+  id           String     @id @default(uuid())
   name         String
   restaurantId String
   restaurant   Restaurant @relation(fields: [restaurantId], references: [id])
-  createdAt    DateTime @default(now())
+  createdAt    DateTime   @default(now())
 
   products Product[]
 
@@ -73,19 +73,19 @@ model Category {
 }
 
 model Product {
-  id                  String   @id @default(uuid())
-  name                String
-  price               Float
-  description         String?
-  hasStock            Boolean  @default(false)
-  stockQuantity       Int?
-  stockThreshold      Int?
-  manuallyOutOfStock  Boolean  @default(false)
-  categoryId          String
-  category            Category  @relation(fields: [categoryId], references: [id])
-  restaurantId        String
-  restaurant          Restaurant @relation(fields: [restaurantId], references: [id])
-  createdAt           DateTime @default(now())
+  id                 String     @id @default(uuid())
+  name               String
+  price              Float
+  description        String?
+  hasStock           Boolean    @default(false)
+  stockQuantity      Int?
+  stockThreshold     Int?
+  manuallyOutOfStock Boolean    @default(false)
+  categoryId         String
+  category           Category   @relation(fields: [categoryId], references: [id])
+  restaurantId       String
+  restaurant         Restaurant @relation(fields: [restaurantId], references: [id])
+  createdAt          DateTime   @default(now())
 
   extras ProductExtra[]
 
