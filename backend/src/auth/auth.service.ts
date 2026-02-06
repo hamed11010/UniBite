@@ -77,12 +77,18 @@ export class AuthService {
     // 🔐 University-based access control
     if (user.role !== Role.SUPER_ADMIN) {
       if (!universityId) {
-        throw new BadRequestException('University is required');
+        throw new BadRequestException('University selection is required');
       }
 
       if (!user.universityId || user.universityId !== universityId) {
+        // Clear error message for restaurant admins
+        if (user.role === Role.RESTAURANT_ADMIN) {
+          throw new UnauthorizedException(
+            'Account not associated with selected university',
+          );
+        }
         throw new UnauthorizedException(
-          'User does not belong to selected university',
+          'Account not associated with selected university',
         );
       }
     }

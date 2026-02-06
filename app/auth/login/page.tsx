@@ -65,7 +65,19 @@ export default function LoginPage() {
         router.push('/student/home')
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials and try again.')
+      // Display clear error messages
+      const errorMessage = err.message || 'Login failed. Please check your credentials and try again.'
+      
+      // Check for specific error types
+      if (errorMessage.includes('Account not associated with selected university')) {
+        setError('Account not associated with selected university. Please select the correct university.')
+      } else if (errorMessage.includes('Invalid credentials')) {
+        setError('Invalid email or password. Please check your credentials.')
+      } else if (errorMessage.includes('University selection is required')) {
+        setError('Please select a university first.')
+      } else {
+        setError(errorMessage)
+      }
     } finally {
       setLoading(false)
     }

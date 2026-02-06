@@ -855,3 +855,204 @@ Refactor Super Admin dashboard to be university-first instead of restaurant-firs
 - Restaurant and user counts are real-time from database
 - Newly created universities are active by default
 - University selection page (public) automatically shows newly created active universities
+
+## Prompt 12 - Restaurant Creation & Admin Assignment
+
+**What was requested:**
+Allow Super Admin to edit universities and create restaurants with restaurant admin accounts:
+1. **University Management:**
+   - Edit existing universities (name, domains, active status)
+2. **Restaurant Creation:**
+   - Create restaurants with university assignment
+   - Assign restaurant admin accounts (email + password)
+   - Restaurant admin must belong to restaurant's university
+3. **Restaurant Admin Authentication:**
+   - Email domain NOT validated (any domain allowed)
+   - University selection REQUIRED during login
+   - If selected university ≠ admin's assigned university → reject with clear error
+4. **Frontend Updates:**
+   - Add Edit University functionality to Super Admin dashboard
+   - Add Restaurant creation form
+   - Show restaurants per university
+   - Clear error messaging for login failures
+
+**What was implemented:**
+- **Prisma Schema Updates:**
+  - Extended Restaurant model: added name, responsibleName, responsiblePhone, createdAt
+  - Added restaurantId to User model (for restaurant admin assignment)
+  - Added User relation to Restaurant model
+- **Restaurant Module (Backend):**
+  - RestaurantService with create, findAll, findByUniversity, findOne methods
+  - RestaurantController with Super Admin only endpoints:
+    - POST /restaurant - Create restaurant with admin account
+    - GET /restaurant - List all restaurants
+    - GET /restaurant/university/:universityId - Get restaurants by university
+    - GET /restaurant/:id - Get single restaurant
+  - CreateRestaurantDto with validation (name, universityId, responsibleName, responsiblePhone, adminEmail, adminPassword)
+  - Restaurant creation automatically creates restaurant admin user with:
+    - Role: RESTAURANT_ADMIN
+    - universityId: restaurant's university
+    - restaurantId: created restaurant's id
+    - Password hashed with bcrypt
+- **Login Validation Updates:**
+  - Updated error message for university mismatch: "Account not associated with selected university"
+  - University selection required for all non-SUPER_ADMIN users
+  - Restaurant admins validated against selected university (no email domain check)
+- **Super Admin Dashboard Enhancements:**
+  - Edit University functionality:
+    - Edit button on each university card
+    - Edit form with name and email domains (add/remove domains)
+    - Save/Cancel buttons
+    - Updates persist to database
+  - Restaurant Management section (shown when university selected):
+    - "Add Restaurant" button
+    - Restaurant creation form with:
+      - Restaurant name
+      - Responsible person name
+      - Responsible phone number
+      - Admin email (any domain allowed)
+      - Admin password (min 8 characters)
+    - Restaurants list showing all restaurants for selected university
+    - Restaurant cards show: name, responsible person, phone, admin count, created date
+  - Restaurants automatically load when university is selected
+  - Restaurant count updates immediately after creation
+- **API Functions:**
+  - Added createRestaurant() - creates restaurant with admin
+  - Added fetchAllRestaurants() - fetches all restaurants
+  - Added fetchRestaurantsByUniversity() - fetches restaurants for a university
+  - Extended Restaurant interface with all fields
+- **Login Page Updates:**
+  - Enhanced error message handling
+  - Clear distinction between:
+    - Wrong credentials
+    - Wrong university selection
+    - Missing university selection
+
+**Files touched:**
+- `backend/prisma/schema.prisma` - Extended Restaurant model, added restaurantId to User
+- `backend/src/restaurant/restaurant.service.ts` - Restaurant CRUD operations and admin creation
+- `backend/src/restaurant/restaurant.controller.ts` - Restaurant endpoints (Super Admin only)
+- `backend/src/restaurant/restaurant.module.ts` - Restaurant module
+- `backend/src/restaurant/dto/create-restaurant.dto.ts` - Restaurant creation DTO
+- `backend/src/auth/auth.service.ts` - Updated error message for university mismatch
+- `backend/src/app.module.ts` - Added RestaurantModule import
+- `lib/api.ts` - Added restaurant management API functions
+- `app/admin/dashboard/page.tsx` - Added Edit University and Restaurant creation functionality
+- `app/auth/login/page.tsx` - Enhanced error message handling
+- `PROMPT_LOG.md` - Added Prompt 12 documentation
+
+**Notes / assumptions:**
+- Restaurant admins can use any email domain (no domain validation)
+- Restaurant admin must select correct university during login (validated server-side)
+- Restaurant creation automatically creates admin account with hashed password
+- Restaurant admin belongs to exactly one restaurant and one university
+- Edit University form allows adding/removing email domains
+- Restaurants are scoped to universities (cannot exist without university)
+- Restaurant list only shows when a specific university is selected
+- Created restaurants appear immediately in the list
+- Restaurant count in university stats updates after restaurant creation
+- All restaurant operations require SUPER_ADMIN role
+- Error messages clearly distinguish between credential errors and university mismatch
+- University selection is mandatory before login for all non-SUPER_ADMIN users
+
+## Prompt 13 - Restaurant Menu & Stock Backend Integration
+
+**What was requested:**
+Integrate restaurant menu and stock management with backend and database:
+1. **Data Model:**
+   - Category model (belongs to restaurant)
+   - Product model (belongs to category and restaurant)
+   - ProductExtra model (belongs to product)
+   - Stock tracking fields: hasStock, stockQuantity, stockThreshold, manuallyOutOfStock
+2. **Stock Rules:**
+   - Unlimited products: hasStock=false, no stock numbers, can be manually marked out of stock
+   - Limited stock products: hasStock=true, uses stockQuantity + stockThreshold
+   - If stockQuantity <= stockThreshold → product is OUT OF STOCK for students
+   - Students NEVER see stock numbers, only "Out of Stock" status
+   - Out-of-stock products visible but disabled (modal won't open)
+3. **Restaurant Admin Features:**
+   - Create/edit/delete categories
+   - Create/edit/delete products
+   - Add/edit extras (sauces/add-ons) for products
+   - Configure stock mode, stock threshold, manual out-of-stock
+   - All operations scoped to their restaurant only
+4. **Student View:**
+   - Load menu only from backend
+   - Show categories, products, extras
+   - Apply stock rules correctly
+   - Never show stock numbers
+5. **Backend Requirements:**
+   - REST endpoints for categories, products, extras CRUD
+   - All endpoints protected by JWT + role + restaurant ownership
+   - Public endpoint for students (no stock numbers)
+
+**What was implemented:**
+- **Prisma Schema Updates:**
+  - Added Category model: id, name, restaurantId, createdAt
+  - Added Product model: id, name, price, description, hasStock, stockQuantity, stockThreshold, manuallyOutOfStock, categoryId, restaurantId, createdAt
+  - Added ProductExtra model: id, name, price, productId
+  - Added relations: Restaurant → Categories, Category → Products, Product → Extras
+- **Menu Module (Backend):**
+  - MenuService with full CRUD for categories and products
+  - MenuController with protected endpoints (RESTAURANT_ADMIN only)
+  - Public endpoint GET /menu/restaurant/:restaurantId for students
+  - RestaurantOwnerGuard to enforce restaurant ownership
+  - Stock calculation logic: isOutOfStock = manuallyOutOfStock OR (hasStock AND stockQuantity <= stockThreshold)
+  - Public menu endpoint hides stock numbers, only returns isOutOfStock boolean
+- **Restaurant Dashboard MenuTab:**
+  - Completely refactored to use backend API
+  - Removed all sessionStorage usage for menu data
+  - Loads categories and products from backend on mount
+  - Create/edit/delete categories with API calls
+  - Create/edit/delete products with API calls
+  - Stock management UI: trackStock checkbox, stockQuantity input, stockThreshold input
+  - Manual out-of-stock toggle
+  - Extras management (sauces/add-ons) integrated with ProductExtra model
+  - Real-time menu updates after CRUD operations
+- **Student Menu Page:**
+  - Refactored to load menu from backend API (fetchPublicMenu)
+  - Removed sessionStorage and mockMenu usage
+  - Uses cookie-based authentication (checkAuth)
+  - Transforms backend data structure to frontend format
+  - Applies stock rules: only shows isOutOfStock flag (no stock numbers)
+  - Out-of-stock products are visible but disabled (modal won't open)
+  - Loading state and empty menu handling
+- **API Functions:**
+  - Added createCategory, fetchCategories, updateCategory, deleteCategory
+  - Added createProduct, fetchProducts, fetchProduct, updateProduct, deleteProduct
+  - Added fetchPublicMenu (for students)
+  - All functions use credentials: 'include' for cookie-based auth
+- **Security:**
+  - RestaurantOwnerGuard ensures restaurant admins can only access their own restaurant's menu
+  - All menu endpoints require JWT authentication
+  - Role-based access: RESTAURANT_ADMIN for management, public for viewing
+  - Restaurant ownership enforced at service level
+
+**Files touched:**
+- `backend/prisma/schema.prisma` - Added Category, Product, ProductExtra models
+- `backend/src/menu/menu.service.ts` - Menu business logic with stock rules
+- `backend/src/menu/menu.controller.ts` - Menu API endpoints
+- `backend/src/menu/menu.module.ts` - Menu module
+- `backend/src/menu/dto/` - DTOs for category and product operations
+- `backend/src/common/guards/restaurant-owner.guard.ts` - Restaurant ownership guard
+- `backend/src/users/users.service.ts` - Added restaurantId to user response
+- `backend/src/app.module.ts` - Added MenuModule
+- `lib/api.ts` - Added menu management API functions
+- `app/restaurant/dashboard/page.tsx` - Refactored MenuTab to use backend
+- `app/student/restaurant/[id]/page.tsx` - Refactored to load menu from backend
+- `PROMPT_LOG.md` - Added Prompt 13 documentation
+
+**Notes / assumptions:**
+- Stock is NOT decremented per order (avoids race conditions)
+- Stock threshold determines when product becomes out of stock
+- Students never see stock numbers, only availability status
+- Restaurant admins see full stock information (quantity, threshold)
+- Extras (sauces/add-ons) are stored as ProductExtra model
+- Menu data is fully backend-driven (no sessionStorage for menu)
+- Restaurant ownership is enforced at guard and service level
+- Public menu endpoint returns only necessary data for students
+- Stock rules: manuallyOutOfStock OR (hasStock AND stockQuantity <= stockThreshold) = out of stock
+- Categories can be deleted (cascades to products and extras)
+- Products can be deleted (cascades to extras)
+- All menu operations require RESTAURANT_ADMIN role
+- Menu is scoped to restaurant (cannot access other restaurants' menus)

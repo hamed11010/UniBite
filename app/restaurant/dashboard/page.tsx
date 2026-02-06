@@ -4,6 +4,19 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Order } from '@/lib/mockData'
 import { checkAuth, hasRole } from '@/lib/auth'
+import {
+  fetchCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  fetchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  type Category as ApiCategory,
+  type Product as ApiProduct,
+  type ProductExtra,
+} from '@/lib/api'
 import styles from './dashboard.module.css'
 
 interface Sauce {
@@ -429,80 +442,9 @@ function OrdersTab({
 }
 
 function MenuTab() {
-  // Load categories from sessionStorage or use default
-  const loadCategories = (): Category[] => {
-    if (typeof window !== 'undefined') {
-      const saved = sessionStorage.getItem('restaurantMenu')
-      if (saved) {
-        return JSON.parse(saved)
-      }
-    }
-    return [
-      { 
-        id: 'cat1', 
-        name: 'Sandwiches', 
-        products: [
-          { 
-            id: 'prod1', 
-            name: 'Classic Burger', 
-            price: 45, 
-            description: 'Juicy beef patty', 
-            hasSauces: true,
-            sauces: [
-              { id: 'sauce1', name: 'Ketchup', price: 0 },
-              { id: 'sauce2', name: 'Mayo', price: 0 },
-            ],
-            addOns: [
-              { id: 'addon1', name: 'Extra Cheese', price: 5 },
-            ],
-          },
-          { 
-            id: 'prod2', 
-            name: 'Chicken Wrap', 
-            price: 40, 
-            description: 'Grilled chicken', 
-            hasSauces: true,
-            sauces: [
-              { id: 'sauce3', name: 'Ketchup', price: 0 },
-            ],
-            addOns: [],
-          },
-        ]
-      },
-      { 
-        id: 'cat2', 
-        name: 'Crepes', 
-        products: [
-          { 
-            id: 'prod3', 
-            name: 'Chocolate Crepe', 
-            price: 30, 
-            description: 'Sweet crepe', 
-            hasSauces: false,
-            sauces: [],
-            addOns: [],
-          },
-        ]
-      },
-      { 
-        id: 'cat3', 
-        name: 'Drinks', 
-        products: [
-          { 
-            id: 'prod4', 
-            name: 'Coca Cola', 
-            price: 15, 
-            description: '', 
-            hasSauces: false,
-            sauces: [],
-            addOns: [],
-          },
-        ]
-      },
-    ]
-  }
-
-  const [categories, setCategories] = useState<Category[]>(loadCategories)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [showAddProduct, setShowAddProduct] = useState<string | null>(null)
   const [editingProduct, setEditingProduct] = useState<{ categoryId: string; product: Product } | null>(null)
@@ -516,55 +458,133 @@ function MenuTab() {
     addOns: [] as AddOn[],
     trackStock: false,
     stockQuantity: 0,
+    stockThreshold: 0,
     isOutOfStock: false,
   })
 
-  // Save categories to sessionStorage whenever they change
+  // Load menu from backend
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('restaurantMenu', JSON.stringify(categories))
-    }
-  }, [categories])
+    loadMenu()
+  }, [])
 
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return
-    const newCategory = {
-      id: `cat${Date.now()}`,
-      name: newCategoryName,
-      products: [],
+  const loadMenu = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      // Fetch categories and products
+      const [categoriesData, productsData] = await Promise.all([
+        fetchCategories(),
+        fetchProducts(),
+      ])
+
+      // Group products by category
+      const categoriesMap = new Map<string, Category>()
+      
+      categoriesData.forEach((cat: ApiCategory) => {
+        categoriesMap.set(cat.id, {
+          id: cat.id,
+          name: cat.name,
+          products: [],
+        })
+      })
+
+      productsData.forEach((prod: ApiProduct) => {
+        const category = categoriesMap.get(prod.categoryId)
+        if (category) {
+          // Convert extras to sauces/addOns format for UI
+          const extras = prod.extras || []
+          const hasExtras = extras.length > 0
+          
+          category.products.push({
+            id: prod.id,
+            name: prod.name,
+            price: prod.price,
+            description: prod.description || '',
+            hasSauces: hasExtras,
+            sauces: hasExtras ? extras.map((e: ProductExtra) => ({
+              id: e.id,
+              name: e.name,
+              price: e.price,
+            })) : [],
+            addOns: [],
+            trackStock: prod.hasStock,
+            stockQuantity: prod.stockQuantity || undefined,
+            stockThreshold: prod.stockThreshold || undefined,
+            isOutOfStock: prod.manuallyOutOfStock,
+          })
+        }
+      })
+
+      setCategories(Array.from(categoriesMap.values()))
+    } catch (err: any) {
+      setError(err.message || 'Failed to load menu')
+    } finally {
+      setLoading(false)
     }
-    setCategories([...categories, newCategory])
-    setNewCategoryName('')
-    setShowAddCategory(false)
   }
 
-  const handleAddProduct = (categoryId: string) => {
-    if (!newProduct.name.trim() || !newProduct.price) return
-    const updatedCategories = categories.map(cat =>
-      cat.id === categoryId
-        ? {
-            ...cat,
-            products: [
-              ...cat.products,
-              {
-                id: `prod${Date.now()}`,
-                name: newProduct.name,
-                price: parseFloat(newProduct.price),
-                description: newProduct.description,
-                hasSauces: newProduct.hasSauces,
-                sauces: newProduct.sauces || [],
-                addOns: newProduct.addOns || [],
-                trackStock: newProduct.trackStock,
-                stockQuantity: newProduct.trackStock ? newProduct.stockQuantity : undefined,
-                isOutOfStock: newProduct.isOutOfStock,
-              },
-            ],
-          }
-        : cat
-    )
-    setCategories(updatedCategories)
-    setNewProduct({ name: '', price: '', description: '', hasSauces: false, sauces: [], addOns: [] })
-    setShowAddProduct(null)
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      setError('Category name is required')
+      return
+    }
+    
+    try {
+      setError(null)
+      await createCategory(newCategoryName.trim())
+      setNewCategoryName('')
+      setShowAddCategory(false)
+      await loadMenu()
+    } catch (err: any) {
+      setError(err.message || 'Failed to create category')
+    }
+  }
+
+  const handleAddProduct = async (categoryId: string) => {
+    if (!newProduct.name.trim() || !newProduct.price) {
+      setError('Product name and price are required')
+      return
+    }
+    
+    try {
+      setError(null)
+      
+      // Combine sauces and addOns into extras
+      const extras = [
+        ...(newProduct.sauces || []).map(s => ({ name: s.name, price: s.price })),
+        ...(newProduct.addOns || []).map(a => ({ name: a.name, price: a.price })),
+      ]
+      
+      await createProduct({
+        name: newProduct.name.trim(),
+        price: parseFloat(newProduct.price),
+        description: newProduct.description || undefined,
+        hasStock: newProduct.trackStock,
+        stockQuantity: newProduct.trackStock ? newProduct.stockQuantity : undefined,
+        stockThreshold: newProduct.trackStock ? newProduct.stockThreshold : undefined,
+        manuallyOutOfStock: newProduct.isOutOfStock,
+        categoryId,
+        extras: extras.length > 0 ? extras : undefined,
+      })
+      
+      setNewProduct({ 
+        name: '', 
+        price: '', 
+        description: '', 
+        hasSauces: false, 
+        sauces: [], 
+        addOns: [],
+        trackStock: false,
+        stockQuantity: 0,
+        stockThreshold: 0,
+        isOutOfStock: false,
+      })
+      setShowAddProduct(null)
+      await loadMenu()
+    } catch (err: any) {
+      setError(err.message || 'Failed to create product')
+    }
   }
 
   const handleEditProduct = (categoryId: string, product: Product) => {
@@ -578,51 +598,67 @@ function MenuTab() {
       addOns: product.addOns || [],
       trackStock: product.trackStock || false,
       stockQuantity: product.stockQuantity || 0,
+      stockThreshold: product.stockThreshold || 0,
       isOutOfStock: product.isOutOfStock || false,
     })
   }
 
-  const handleUpdateProduct = () => {
-    if (!editingProduct || !newProduct.name.trim() || !newProduct.price) return
-    const updatedCategories = categories.map(cat =>
-      cat.id === editingProduct.categoryId
-        ? {
-            ...cat,
-            products: cat.products.map(p =>
-              p.id === editingProduct.product.id
-                ? {
-                    ...p,
-                    name: newProduct.name,
-                    price: parseFloat(newProduct.price),
-                    description: newProduct.description,
-                    hasSauces: newProduct.hasSauces,
-                    sauces: newProduct.sauces || [],
-                    addOns: newProduct.addOns || [],
-                    trackStock: newProduct.trackStock,
-                    stockQuantity: newProduct.trackStock ? newProduct.stockQuantity : undefined,
-                    isOutOfStock: newProduct.isOutOfStock,
-                  }
-                : p
-            ),
-          }
-        : cat
-    )
-    setCategories(updatedCategories)
-    setEditingProduct(null)
-    setNewProduct({ name: '', price: '', description: '', hasSauces: false, sauces: [], addOns: [] })
+  const handleUpdateProduct = async () => {
+    if (!editingProduct || !newProduct.name.trim() || !newProduct.price) {
+      setError('Product name and price are required')
+      return
+    }
+    
+    try {
+      setError(null)
+      
+      // Combine sauces and addOns into extras
+      const extras = [
+        ...(newProduct.sauces || []).map(s => ({ name: s.name, price: s.price })),
+        ...(newProduct.addOns || []).map(a => ({ name: a.name, price: a.price })),
+      ]
+      
+      await updateProduct(editingProduct.product.id, {
+        name: newProduct.name.trim(),
+        price: parseFloat(newProduct.price),
+        description: newProduct.description || undefined,
+        hasStock: newProduct.trackStock,
+        stockQuantity: newProduct.trackStock ? newProduct.stockQuantity : undefined,
+        stockThreshold: newProduct.trackStock ? newProduct.stockThreshold : undefined,
+        manuallyOutOfStock: newProduct.isOutOfStock,
+        categoryId: editingProduct.categoryId,
+        extras: extras.length > 0 ? extras : [],
+      })
+      
+      setEditingProduct(null)
+      setNewProduct({ 
+        name: '', 
+        price: '', 
+        description: '', 
+        hasSauces: false, 
+        sauces: [], 
+        addOns: [],
+        trackStock: false,
+        stockQuantity: 0,
+        stockThreshold: 0,
+        isOutOfStock: false,
+      })
+      await loadMenu()
+    } catch (err: any) {
+      setError(err.message || 'Failed to update product')
+    }
   }
 
-  const handleDeleteProduct = (categoryId: string, productId: string) => {
+  const handleDeleteProduct = async (categoryId: string, productId: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return
-    const updatedCategories = categories.map(cat =>
-      cat.id === categoryId
-        ? {
-            ...cat,
-            products: cat.products.filter(p => p.id !== productId),
-          }
-        : cat
-    )
-    setCategories(updatedCategories)
+    
+    try {
+      setError(null)
+      await deleteProduct(productId)
+      await loadMenu()
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete product')
+    }
   }
 
   const addSauce = () => {
@@ -681,6 +717,14 @@ function MenuTab() {
     })
   }
 
+  if (loading) {
+    return (
+      <div className={styles.menuTab}>
+        <p>Loading menu...</p>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.menuTab}>
       <div className={styles.menuHeader}>
@@ -692,6 +736,8 @@ function MenuTab() {
           + Add Category
         </button>
       </div>
+
+      {error && <div className={styles.error}>{error}</div>}
 
       {showAddCategory && (
         <div className={styles.addForm}>
@@ -827,22 +873,35 @@ function MenuTab() {
                     <input
                       type="checkbox"
                       checked={newProduct.trackStock}
-                      onChange={(e) => setNewProduct({ ...newProduct, trackStock: e.target.checked, stockQuantity: e.target.checked ? newProduct.stockQuantity : 0 })}
+                      onChange={(e) => setNewProduct({ ...newProduct, trackStock: e.target.checked, stockQuantity: e.target.checked ? newProduct.stockQuantity : 0, stockThreshold: e.target.checked ? newProduct.stockThreshold : 0 })}
                     />
                     <span>Track stock for this product</span>
                   </label>
                   {newProduct.trackStock && (
-                    <div className={styles.stockInput}>
-                      <label className={styles.settingLabel}>Stock Quantity (Internal Only)</label>
-                      <input
-                        type="number"
-                        placeholder="Stock quantity"
-                        value={newProduct.stockQuantity}
-                        onChange={(e) => setNewProduct({ ...newProduct, stockQuantity: parseInt(e.target.value) || 0 })}
-                        className={styles.input}
-                        min="0"
-                      />
-                    </div>
+                    <>
+                      <div className={styles.stockInput}>
+                        <label className={styles.settingLabel}>Stock Quantity (Internal Only)</label>
+                        <input
+                          type="number"
+                          placeholder="Stock quantity"
+                          value={newProduct.stockQuantity}
+                          onChange={(e) => setNewProduct({ ...newProduct, stockQuantity: parseInt(e.target.value) || 0 })}
+                          className={styles.input}
+                          min="0"
+                        />
+                      </div>
+                      <div className={styles.stockInput}>
+                        <label className={styles.settingLabel}>Stock Threshold (Out of stock when quantity ≤ threshold)</label>
+                        <input
+                          type="number"
+                          placeholder="Stock threshold"
+                          value={newProduct.stockThreshold}
+                          onChange={(e) => setNewProduct({ ...newProduct, stockThreshold: parseInt(e.target.value) || 0 })}
+                          className={styles.input}
+                          min="0"
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -855,7 +914,7 @@ function MenuTab() {
                     />
                     <span>Mark as Out of Stock</span>
                   </label>
-                  <p className={styles.overrideNote}>Manual override (demo mode)</p>
+                  <p className={styles.overrideNote}>Manual override</p>
                 </div>
 
                 <div className={styles.formActions}>
@@ -869,7 +928,7 @@ function MenuTab() {
                     onClick={() => {
                       setShowAddProduct(null)
                       setEditingProduct(null)
-                      setNewProduct({ name: '', price: '', description: '', hasSauces: false, sauces: [], addOns: [], trackStock: false, stockQuantity: 0, isOutOfStock: false })
+                      setNewProduct({ name: '', price: '', description: '', hasSauces: false, sauces: [], addOns: [], trackStock: false, stockQuantity: 0, stockThreshold: 0, isOutOfStock: false })
                     }}
                     className={styles.cancelButton}
                   >
@@ -881,7 +940,11 @@ function MenuTab() {
 
             <div className={styles.productsList}>
               {category.products.map((product) => {
-                const isAvailable = !product.isOutOfStock && (!product.trackStock || (product.stockQuantity && product.stockQuantity > 0))
+                // Calculate availability based on stock rules
+                let isAvailable = !product.isOutOfStock
+                if (isAvailable && product.trackStock && product.stockQuantity !== undefined && product.stockThreshold !== undefined) {
+                  isAvailable = product.stockQuantity > product.stockThreshold
+                }
                 return (
                   <div key={product.id} className={`${styles.productCard} ${!isAvailable ? styles.outOfStock : ''}`}>
                     <div className={styles.productImagePlaceholder}>📷</div>
@@ -900,7 +963,11 @@ function MenuTab() {
                         <span className={styles.sauceBadge}>Sauces available</span>
                       )}
                       {product.trackStock && product.stockQuantity !== undefined && (
-                        <p className={styles.stockInfo}>Stock: {product.stockQuantity} (Internal)</p>
+                        <p className={styles.stockInfo}>
+                          Stock: {product.stockQuantity} 
+                          {product.stockThreshold !== undefined && ` (Threshold: ${product.stockThreshold})`} 
+                          (Internal)
+                        </p>
                       )}
                     </div>
                     <div className={styles.productActions}>
@@ -924,9 +991,6 @@ function MenuTab() {
           </div>
         ))}
       </div>
-      <p className={styles.demoNote}>
-        Changes are saved locally (demo mode)
-      </p>
     </div>
   )
 }

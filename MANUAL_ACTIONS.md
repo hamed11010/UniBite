@@ -172,6 +172,11 @@ npx prisma migrate dev --name migration_name
 npx prisma migrate dev --name add_university_model
 ```
 
+**Important:** After adding the Menu models (Category, Product, ProductExtra) in Prompt 13, run:
+```bash
+npx prisma migrate dev --name add_menu_models
+```
+
 This will:
 - Create a new migration file
 - Apply the migration to the database

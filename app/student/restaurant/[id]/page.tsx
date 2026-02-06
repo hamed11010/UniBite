@@ -2,7 +2,9 @@
 
 import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { mockRestaurants, mockMenu, Product } from '@/lib/mockData'
+import { mockRestaurants } from '@/lib/mockData'
+import { fetchPublicMenu, type PublicCategory, type PublicProduct } from '@/lib/api'
+import { checkAuth } from '@/lib/auth'
 import styles from './menu.module.css'
 
 export default function RestaurantMenuPage() {
@@ -39,6 +41,7 @@ export default function RestaurantMenuPage() {
   }
 
   const [menu, setMenu] = useState<ExtendedProduct[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedProduct, setSelectedProduct] = useState<ExtendedProduct | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [comment, setComment] = useState('')
@@ -46,58 +49,66 @@ export default function RestaurantMenuPage() {
   const [selectedAddOns, setSelectedAddOns] = useState<string[]>([])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuthenticated = sessionStorage.getItem('isAuthenticated')
-      const user = JSON.parse(sessionStorage.getItem('user') || '{}')
-      if (!isAuthenticated) {
-        router.push('/auth/login')
-        return
-      }
+    const loadMenu = async () => {
+      try {
+        // Check authentication
+        const user = await checkAuth()
+        if (!user) {
+          router.push('/auth/login')
+          return
+        }
 
-      if (user && user.role === 'student') {
-        setIsStudent(true)
-      }
+        if (user.role === 'STUDENT') {
+          setIsStudent(true)
+        }
 
-      // Try to load from restaurantMenu (from restaurant dashboard)
-      const savedMenu = sessionStorage.getItem('restaurantMenu')
-      if (savedMenu) {
-        try {
-          const categories = JSON.parse(savedMenu)
-          // Flatten categories into products array
+        // Load menu from backend
+        if (restaurantId) {
+          setLoading(true)
+          const categories = await fetchPublicMenu(restaurantId)
+          
+          // Flatten categories into products array for compatibility
           const allProducts: ExtendedProduct[] = []
-          categories.forEach((cat: any) => {
-            cat.products.forEach((prod: any) => {
+          categories.forEach((cat: PublicCategory) => {
+            cat.products.forEach((prod: PublicProduct) => {
               allProducts.push({
-                ...prod,
+                id: prod.id,
+                name: prod.name,
+                price: prod.price,
+                description: prod.description || '',
                 category: cat.name,
+                allowSauces: (prod.extras && prod.extras.length > 0) || false,
+                availableSauces: prod.extras?.map(e => e.name) || [],
+                sauces: prod.extras?.map(e => ({
+                  id: e.id,
+                  name: e.name,
+                  price: e.price,
+                })) || [],
+                addOns: [],
+                trackStock: false, // Students never see stock tracking
+                stockQuantity: undefined,
+                isOutOfStock: prod.isOutOfStock,
               })
             })
           })
-          if (allProducts.length > 0) {
-            setMenu(allProducts)
-            return
-          }
-        } catch (e) {
-          // Fall back to mockMenu
+          
+          setMenu(allProducts)
         }
+      } catch (err: any) {
+        console.error('Failed to load menu:', err)
+        // If menu fails to load, show empty menu
+        setMenu([])
+      } finally {
+        setLoading(false)
       }
     }
 
-    // Fall back to mockMenu
-    if (restaurantId && mockMenu[restaurantId]) {
-      setMenu(mockMenu[restaurantId] as ExtendedProduct[])
-    }
+    loadMenu()
   }, [restaurantId, router])
 
   const isProductAvailable = (product: ExtendedProduct): boolean => {
-    // Check if manually marked as out of stock
-    if (product.isOutOfStock) return false
-    // Check stock if tracking is enabled
-    if (product.trackStock && product.stockQuantity !== undefined) {
-      return product.stockQuantity > 0
-    }
-    // If not tracking stock and not manually out of stock, it's available
-    return true
+    // Students only see isOutOfStock flag (no stock numbers)
+    return !product.isOutOfStock
   }
 
   const handleProductClick = (product: ExtendedProduct) => {
@@ -292,7 +303,12 @@ export default function RestaurantMenuPage() {
       </div>
 
       <div className={styles.menuContent}>
-        {Object.entries(menuByCategory).map(([category, products]) => (
+        {loading ? (
+          <div className={styles.loading}>Loading menu...</div>
+        ) : Object.keys(menuByCategory).length === 0 ? (
+          <div className={styles.emptyMenu}>No menu items available</div>
+        ) : (
+          Object.entries(menuByCategory).map(([category, products]) => (
           <div key={category} className={styles.categorySection}>
             <h2 className={styles.categoryTitle}>{category}</h2>
             <div className={styles.productGrid}>
@@ -335,7 +351,8 @@ export default function RestaurantMenuPage() {
               })}
             </div>
           </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Product Modal */}

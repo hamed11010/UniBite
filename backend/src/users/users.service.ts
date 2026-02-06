@@ -56,6 +56,7 @@ export class UsersService {
         email: true,
         role: true,
         universityId: true,
+        restaurantId: true,
         isVerified: true,
         createdAt: true,
       },

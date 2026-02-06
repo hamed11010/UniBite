@@ -111,8 +111,13 @@ Static assets served at the root URL.
 - View all universities with stats (restaurant count, user count)
 - Select specific university or "All Universities"
 - Add new university (name + allowed email domains)
+- Edit existing university (name, email domains)
 - Enable/disable universities
 - University statistics (total universities, active universities, total restaurants, total users)
+- Restaurant management (when university selected):
+  - Create restaurant with admin account
+  - View restaurants for selected university
+  - Restaurant details (name, responsible person, phone, admin count)
 
 ## State Management
 
@@ -186,6 +191,23 @@ backend/
   - `create-university.dto.ts` - University creation validation
   - `update-university.dto.ts` - University update validation
 
+#### Restaurant Module (`src/restaurant/`)
+- `restaurant.service.ts` - Restaurant CRUD operations and restaurant admin account creation
+- `restaurant.controller.ts` - Restaurant endpoints (Super Admin only)
+- `restaurant.module.ts` - Restaurant module configuration
+- `dto/` - Data transfer objects:
+  - `create-restaurant.dto.ts` - Restaurant creation validation (includes admin credentials)
+
+#### Menu Module (`src/menu/`)
+- `menu.service.ts` - Menu CRUD operations (categories, products, extras) with stock management
+- `menu.controller.ts` - Menu endpoints (RESTAURANT_ADMIN for management, public for viewing)
+- `menu.module.ts` - Menu module configuration
+- `dto/` - Data transfer objects:
+  - `create-category.dto.ts` - Category creation validation
+  - `update-category.dto.ts` - Category update validation
+  - `create-product.dto.ts` - Product creation validation (includes extras)
+  - `update-product.dto.ts` - Product update validation (includes extras)
+
 #### Prisma Module (`src/prisma/`)
 - `prisma.service.ts` - Prisma Client service (database connection)
 - `prisma.module.ts` - Global Prisma module
@@ -194,6 +216,7 @@ backend/
 - `guards/` - Route guards:
   - `jwt-auth.guard.ts` - JWT authentication guard
   - `roles.guard.ts` - Role-based access control guard
+  - `restaurant-owner.guard.ts` - Restaurant ownership guard (enforces restaurant admins can only access their restaurant)
 - `decorators/` - Custom decorators:
   - `roles.decorator.ts` - `@Roles()` decorator for route protection
 
@@ -206,9 +229,12 @@ backend/
 ### Prisma Directory (`prisma/`)
 
 - `schema.prisma` - Database schema definition
-  - User model with roles (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN), universityId, isVerified
+  - User model with roles (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN), universityId, restaurantId, isVerified
   - University model with name, allowedEmailDomains (array), isActive
-  - Restaurant model (placeholder for future)
+  - Restaurant model with name, universityId, responsibleName, responsiblePhone
+  - Category model with name, restaurantId
+  - Product model with name, price, description, hasStock, stockQuantity, stockThreshold, manuallyOutOfStock, categoryId, restaurantId
+  - ProductExtra model with name, price, productId
 - `migrations/` - Database migration files (generated)
 
 ### Key Backend Features
@@ -240,8 +266,28 @@ backend/
 - `POST /university` - Create university
 - `GET /university` - List all universities with stats (restaurantCount, userCount) (with optional includeInactive query)
 - `GET /university/:id` - Get single university with stats
-- `PUT /university/:id` - Update university
+- `PUT /university/:id` - Update university (name, allowedEmailDomains)
 - `PUT /university/:id/status` - Enable/disable university
+
+**Restaurant (Super Admin Only):**
+- `POST /restaurant` - Create restaurant with restaurant admin account
+- `GET /restaurant` - List all restaurants
+- `GET /restaurant/university/:universityId` - Get restaurants by university
+- `GET /restaurant/:id` - Get single restaurant
+
+**Menu (Public):**
+- `GET /menu/restaurant/:restaurantId` - Get public menu for students (no stock numbers, only availability)
+
+**Menu (Restaurant Admin Only):**
+- `POST /menu/category` - Create category
+- `GET /menu/category` - List categories for restaurant
+- `PUT /menu/category/:id` - Update category
+- `DELETE /menu/category/:id` - Delete category (cascades to products)
+- `POST /menu/product` - Create product with extras
+- `GET /menu/product` - List products for restaurant
+- `GET /menu/product/:id` - Get single product
+- `PUT /menu/product/:id` - Update product with extras
+- `DELETE /menu/product/:id` - Delete product (cascades to extras)
 
 #### Security
 - Input validation (class-validator)
