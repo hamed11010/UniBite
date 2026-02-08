@@ -1,85 +1,90 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { CartItem } from '@/lib/mockData'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
+import { createOrder } from '@/lib/api'
+import { checkAuth } from '@/lib/auth'
 import styles from './cart.module.css'
+
+export interface CartItemPayload {
+  productId: string
+  productName: string
+  price: number
+  quantity: number
+  comment?: string
+  sauces?: string[]
+}
 
 export default function CartPage() {
   const router = useRouter()
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [restaurantId, setRestaurantId] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const [submitting, setSubmitting] = useState(false)
+
+  // Cart is passed via URL query as base64-encoded JSON
+  const { cart, restaurantId } = useMemo(() => {
+    const cartParam = searchParams.get('cart')
+    const restaurantIdParam = searchParams.get('restaurantId')
+    if (!cartParam || !restaurantIdParam) {
+      return { cart: [] as CartItemPayload[], restaurantId: null as string | null }
+    }
+    try {
+      const decoded = JSON.parse(
+        Buffer.from(cartParam, 'base64').toString('utf-8'),
+      ) as CartItemPayload[]
+      return { cart: decoded, restaurantId: restaurantIdParam }
+    } catch {
+      return { cart: [] as CartItemPayload[], restaurantId: null as string | null }
+    }
+  }, [searchParams])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuthenticated = sessionStorage.getItem('isAuthenticated')
-      if (!isAuthenticated) {
+    const verify = async () => {
+      const user = await checkAuth()
+      if (!user) {
         router.push('/auth/login')
-        return
-      }
-
-      const cartData = JSON.parse(sessionStorage.getItem('cart') || '[]')
-      setCart(cartData)
-
-      // Get restaurant ID from the first item (assuming all items are from same restaurant)
-      // In a real app, this would be stored separately
-      if (cartData.length > 0) {
-        // For demo, we'll use rest1
-        setRestaurantId('rest1')
       }
     }
+    verify()
   }, [router])
 
   const updateQuantity = (index: number, newQuantity: number) => {
+    // Cart is not persisted; quantities are fixed for this demo to keep URL simple
     if (newQuantity < 1) return
-    const updatedCart = [...cart]
-    updatedCart[index].quantity = newQuantity
-    setCart(updatedCart)
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('cart', JSON.stringify(updatedCart))
-    }
   }
 
   const removeItem = (index: number) => {
-    const updatedCart = cart.filter((_, i) => i !== index)
-    setCart(updatedCart)
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('cart', JSON.stringify(updatedCart))
-    }
+    // Cart editing is not supported when passed via URL; in a full app this would be stateful
   }
 
   const calculateTotal = () => {
     return cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   }
 
-  const handleCheckout = () => {
-    if (cart.length === 0) return
+  const handleCheckout = async () => {
+    if (cart.length === 0 || !restaurantId) return
 
-    // Create order
-    const order = {
-      id: `order-${Date.now()}`,
-      restaurantId: restaurantId || 'rest1',
-      restaurantName: 'Campus Cafe', // Mock
-      items: cart,
-      total: calculateTotal(),
-      status: 'received' as const,
-      estimatedTime: 10,
-      createdAt: new Date().toISOString(),
+    try {
+      setSubmitting(true)
+      const items = cart.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        selectedExtras: item.sauces || [],
+        comment: item.comment,
+      }))
+      const order = await createOrder({
+        restaurantId,
+        items,
+        paymentMethod: 'FAKE',
+      })
+      router.push(`/student/order/${order.id}`)
+    } catch (err) {
+      console.error('Failed to create order', err)
+    } finally {
+      setSubmitting(false)
     }
-
-    // Store order
-    if (typeof window !== 'undefined') {
-      const orders = JSON.parse(sessionStorage.getItem('orders') || '[]')
-      orders.push(order)
-      sessionStorage.setItem('orders', JSON.stringify(orders))
-      sessionStorage.setItem('currentOrder', JSON.stringify(order))
-      sessionStorage.removeItem('cart')
-    }
-
-    router.push(`/student/order/${order.id}`)
   }
 
-  if (cart.length === 0) {
+  if (!restaurantId || cart.length === 0) {
     return (
       <div className={styles.container}>
         <div className={styles.header}>
@@ -166,8 +171,12 @@ export default function CartPage() {
             <span>Total</span>
             <span className={styles.totalAmount}>{calculateTotal()} EGP</span>
           </div>
-          <button onClick={handleCheckout} className={styles.checkoutButton}>
-            Proceed to Checkout
+          <button
+            onClick={handleCheckout}
+            className={styles.checkoutButton}
+            disabled={submitting}
+          >
+            {submitting ? 'Placing Order...' : 'Proceed to Checkout'}
           </button>
         </div>
       </div>

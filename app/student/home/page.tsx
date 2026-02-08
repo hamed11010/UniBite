@@ -2,13 +2,15 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { mockRestaurants, Restaurant } from '@/lib/mockData'
 import { checkAuth, hasRole } from '@/lib/auth'
+import { fetchRestaurantsByUniversityPublic, type Restaurant } from '@/lib/api'
 import styles from './home.module.css'
 
 export default function StudentHome() {
   const router = useRouter()
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -16,18 +18,34 @@ export default function StudentHome() {
     // Cookie-based authentication check - single source of truth
     const verifyAuth = async () => {
       const user = await checkAuth()
-      
+
       if (!user || !hasRole(user, 'STUDENT')) {
         router.push('/auth/login')
         return
       }
 
-      // User is authenticated and has correct role - load dashboard data
-      // Filter out disabled restaurants, but show coming soon ones
-      const enabledRestaurants = mockRestaurants.filter(
-        (r) => r.enabled !== false
-      )
-      setRestaurants(enabledRestaurants)
+      // Get selected university (stored when student chose university)
+      const selectedUniversityId =
+        typeof window !== 'undefined'
+          ? sessionStorage.getItem('selectedUniversity')
+          : null
+
+      if (!selectedUniversityId) {
+        setError('No university selected. Please go back and choose your university.')
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        setError(null)
+        const data = await fetchRestaurantsByUniversityPublic(selectedUniversityId)
+        setRestaurants(data)
+      } catch (err: any) {
+        setError(err.message || 'Failed to load restaurants')
+      } finally {
+        setLoading(false)
+      }
     }
 
     verifyAuth()
@@ -72,7 +90,9 @@ export default function StudentHome() {
       </div>
 
       <div className={styles.restaurantList}>
-        {restaurants.map((restaurant) => {
+        {loading && <p>Loading restaurants...</p>}
+        {error && <p>{error}</p>}
+        {!loading && !error && restaurants.map((restaurant) => {
           const isComingSoon = restaurant.comingSoon || false
           const isClickable = restaurant.isOpen && !isComingSoon
           

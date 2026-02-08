@@ -573,3 +573,146 @@ export async function fetchRestaurantsByUniversity(
 
   return response.json();
 }
+
+// Public restaurant listing for students (by university)
+export async function fetchRestaurantsByUniversityPublic(
+  universityId: string,
+): Promise<Restaurant[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/restaurant/by-university/${universityId}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch restaurants');
+  }
+
+  return response.json();
+}
+
+// Orders
+export type OrderStatus =
+  | 'RECEIVED'
+  | 'PREPARING'
+  | 'READY'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export interface OrderItem {
+  id: string;
+  productId: string | null;
+  productName: string;
+  unitPrice: number;
+  quantity: number;
+  selectedExtras: string[];
+}
+
+export interface Order {
+  id: string;
+  studentId: string;
+  restaurantId: string;
+  totalPrice: number;
+  status: OrderStatus;
+  createdAt: string;
+  items: OrderItem[];
+  restaurant?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface CreateOrderItemPayload {
+  productId: string;
+  quantity: number;
+  selectedExtras?: string[];
+  comment?: string;
+}
+
+export interface CreateOrderPayload {
+  restaurantId: string;
+  items: CreateOrderItemPayload[];
+  paymentMethod?: string;
+}
+
+export async function createOrder(
+  data: CreateOrderPayload,
+): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to create order');
+  }
+
+  return response.json();
+}
+
+// Restaurant admin - fetch orders for own restaurant
+export async function fetchRestaurantOrders(): Promise<Order[]> {
+  const response = await fetch(`${API_BASE_URL}/orders`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch orders');
+  }
+
+  return response.json();
+}
+
+export async function updateOrderStatusApi(
+  id: string,
+  status: OrderStatus,
+): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update order status');
+  }
+
+  return response.json();
+}
+
+// Student - get own order
+export async function fetchOrderById(id: string): Promise<Order> {
+  const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch order');
+  }
+
+  return response.json();
+}

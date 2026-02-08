@@ -2,7 +2,8 @@
 
 import { useRouter, useParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Order } from '@/lib/mockData'
+import { fetchOrderById, type Order } from '@/lib/api'
+import { checkAuth } from '@/lib/auth'
 import styles from './order.module.css'
 
 export default function OrderStatusPage() {
@@ -11,31 +12,36 @@ export default function OrderStatusPage() {
   const orderId = params.id as string
 
   const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const isAuthenticated = sessionStorage.getItem('isAuthenticated')
-      if (!isAuthenticated) {
+    const load = async () => {
+      const user = await checkAuth()
+      if (!user) {
         router.push('/auth/login')
         return
       }
-
-      const orders = JSON.parse(sessionStorage.getItem('orders') || '[]')
-      const currentOrder = orders.find((o: Order) => o.id === orderId)
-      setOrder(currentOrder || null)
-
-      // Simulate status updates (for demo)
-      if (currentOrder && currentOrder.status === 'received') {
-        setTimeout(() => {
-          const updatedOrders = orders.map((o: Order) =>
-            o.id === orderId ? { ...o, status: 'preparing' } : o
-          )
-          sessionStorage.setItem('orders', JSON.stringify(updatedOrders))
-          setOrder({ ...currentOrder, status: 'preparing' })
-        }, 5000)
+      try {
+        setLoading(true)
+        const data = await fetchOrderById(orderId)
+        setOrder(data)
+      } catch (err) {
+        console.error('Failed to load order', err)
+        setOrder(null)
+      } finally {
+        setLoading(false)
       }
     }
+    load()
   }, [orderId, router])
+
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <p>Loading order...</p>
+      </div>
+    )
+  }
 
   if (!order) {
     return (
@@ -47,13 +53,15 @@ export default function OrderStatusPage() {
 
   const getStatusMessage = () => {
     switch (order.status) {
-      case 'received':
+      case 'RECEIVED':
         return 'Order received by the restaurant'
-      case 'preparing':
+      case 'PREPARING':
         return 'Preparing your order'
-      case 'ready':
+      case 'READY':
         return 'Ready for pickup!'
-      case 'cancelled':
+      case 'COMPLETED':
+        return 'Order completed'
+      case 'CANCELLED':
         return 'Order cancelled'
       default:
         return 'Processing...'
@@ -62,13 +70,15 @@ export default function OrderStatusPage() {
 
   const getStatusColor = () => {
     switch (order.status) {
-      case 'received':
+      case 'RECEIVED':
         return '#2196F3'
-      case 'preparing':
+      case 'PREPARING':
         return '#FF9800'
-      case 'ready':
+      case 'READY':
         return '#4CAF50'
-      case 'cancelled':
+      case 'COMPLETED':
+        return '#4CAF50'
+      case 'CANCELLED':
         return '#F44336'
       default:
         return '#999'
@@ -92,29 +102,11 @@ export default function OrderStatusPage() {
           >
             {getStatusMessage()}
           </div>
-
-          {order.status === 'received' && (
-            <p className={styles.estimatedTime}>
-              Estimated preparation time: ~{order.estimatedTime} minutes.
-            </p>
-          )}
-
-          {order.status === 'preparing' && (
-            <p className={styles.calmMessage}>
-              Your order is being prepared. Preparation time may vary during busy hours.
-            </p>
-          )}
-
-          {order.status === 'ready' && (
-            <p className={styles.pickupNote}>
-              🎉 Pickup anytime during restaurant working hours.
-            </p>
-          )}
         </div>
 
         <div className={styles.orderDetails}>
           <h2 className={styles.sectionTitle}>Order Details</h2>
-          <p className={styles.restaurantName}>{order.restaurantName}</p>
+          <p className={styles.restaurantName}>{order.restaurant?.name}</p>
 
           <div className={styles.itemsList}>
             {order.items.map((item, index) => (
@@ -123,16 +115,13 @@ export default function OrderStatusPage() {
                   <span className={styles.itemName}>{item.productName}</span>
                   <span className={styles.itemQuantity}>× {item.quantity}</span>
                 </div>
-                {item.comment && (
-                  <p className={styles.itemComment}>Note: {item.comment}</p>
-                )}
-                {item.sauces && item.sauces.length > 0 && (
+                {item.selectedExtras && item.selectedExtras.length > 0 && (
                   <p className={styles.itemSauces}>
-                    Sauces: {item.sauces.join(', ')}
+                    Extras: {item.selectedExtras.join(', ')}
                   </p>
                 )}
                 <p className={styles.itemPrice}>
-                  {item.price * item.quantity} EGP
+                  {item.unitPrice * item.quantity} EGP
                 </p>
               </div>
             ))}
@@ -140,7 +129,7 @@ export default function OrderStatusPage() {
 
           <div className={styles.total}>
             <span>Total</span>
-            <span className={styles.totalAmount}>{order.total} EGP</span>
+            <span className={styles.totalAmount}>{order.totalPrice} EGP</span>
           </div>
         </div>
       </div>

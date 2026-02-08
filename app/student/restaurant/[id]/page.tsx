@@ -128,7 +128,6 @@ export default function RestaurantMenuPage() {
     // Calculate base price + add-ons
     let itemPrice = selectedProduct.price
     const selectedSauceNames: string[] = []
-    const selectedAddOnNames: string[] = []
     
     if (selectedProduct.sauces) {
       selectedSauces.forEach(sauceId => {
@@ -147,16 +146,6 @@ export default function RestaurantMenuPage() {
         }
       })
     }
-    
-    if (selectedProduct.addOns) {
-      selectedAddOns.forEach(addOnId => {
-        const addOn = selectedProduct.addOns?.find(a => a.id === addOnId)
-        if (addOn) {
-          itemPrice += addOn.price
-          selectedAddOnNames.push(addOn.name)
-        }
-      })
-    }
 
     const cartItem = {
       productId: selectedProduct.id,
@@ -165,20 +154,14 @@ export default function RestaurantMenuPage() {
       quantity,
       comment: comment.trim() || undefined,
       sauces: selectedSauceNames.length > 0 ? selectedSauceNames : undefined,
-      addOns: selectedAddOnNames.length > 0 ? selectedAddOnNames : undefined,
     }
 
-    // Get existing cart from sessionStorage
-    const existingCart = typeof window !== 'undefined' 
-      ? JSON.parse(sessionStorage.getItem('cart') || '[]')
-      : []
-
-    // Add new item
-    existingCart.push(cartItem)
-    
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('cart', JSON.stringify(existingCart))
-    }
+    const payload = Buffer.from(JSON.stringify([cartItem])).toString('base64')
+    router.push(
+      `/student/cart?restaurantId=${encodeURIComponent(
+        restaurantId,
+      )}&cart=${encodeURIComponent(payload)}`,
+    )
 
     // Close modal
     setSelectedProduct(null)
@@ -261,9 +244,7 @@ export default function RestaurantMenuPage() {
     return acc
   }, {} as Record<string, Product[]>)
 
-  const cartCount = typeof window !== 'undefined'
-    ? JSON.parse(sessionStorage.getItem('cart') || '[]').length
-    : 0
+  const cartCount = 0
 
   if (!restaurant) {
     return (

@@ -1056,3 +1056,127 @@ Integrate restaurant menu and stock management with backend and database:
 - Products can be deleted (cascades to extras)
 - All menu operations require RESTAURANT_ADMIN role
 - Menu is scoped to restaurant (cannot access other restaurants' menus)
+
+## Prompt 14 - Replace Mock Data with Real Orders & Backend-Driven Flow
+
+**What was requested:**
+- Remove all mock restaurant/order data and sessionStorage-based orders.
+- Introduce real Order and OrderItem models in Prisma.
+- Implement backend Order module:
+  - Student creates orders.
+  - Restaurant admin fetches orders for their restaurant.
+  - Restaurant admin updates order status.
+- Student flow:
+  - See only restaurants for selected university.
+  - See menus from backend.
+  - Place orders (fake payment allowed).
+- Restaurant admin flow:
+  - See real incoming orders.
+  - Mark orders as preparing / ready / completed.
+- Enforce stock rules on order submit (no stock decrement).
+- Add category slider/scrollable menu sections (kept existing vertical sections, stock-aware).
+- Remove mock UI where possible; keep layout.
+
+**What was implemented:**
+- **Prisma Order Models:**
+  - `OrderStatus` enum: `RECEIVED`, `PREPARING`, `READY`, `COMPLETED`, `CANCELLED`.
+  - `Order` model:
+    - `id`, `studentId` → `User`, `restaurantId` → `Restaurant`, `totalPrice`, `status`, `createdAt`.
+    - `items OrderItem[]`.
+  - `OrderItem` model:
+    - `id`, `orderId` → `Order`, optional `productId` → `Product`.
+    - Snapshot fields: `productName`, `unitPrice`, `quantity`, `selectedExtras` (string[] of extra names).
+  - Relations:
+    - Restaurant now has `products` and (implicitly via Prisma) orders; Product has `orderItems` via `OrderItem.productId` (for reference).
+- **Order Module (Backend):**
+  - `OrderService`:
+    - `createOrder(studentId, CreateOrderDto)`:
+      - Validates restaurant exists.
+      - Loads all products in the order for that restaurant.
+      - Applies stock rules per product:
+        - `isOutOfStock = manuallyOutOfStock OR (hasStock AND stockQuantity <= stockThreshold)`.
+      - Validates extras (`ProductExtra`) per product.
+      - Computes `totalPrice` including extras.
+      - Creates `Order` + `OrderItem`s in a transaction, storing snapshot fields and selected extras as names.
+    - `getOrdersForRestaurant(restaurantId)`:
+      - Returns orders with items and student email, ordered by `createdAt desc`.
+    - `updateOrderStatus(orderId, restaurantId, status)`:
+      - Enforces restaurant ownership, then updates status.
+    - `getOrderForStudent(orderId, studentId)`:
+      - Returns order with items and restaurant name; validates student ownership.
+  - `OrderController`:
+    - `POST /orders` (Student only) → `createOrder`.
+    - `GET /orders` (Restaurant Admin only, via `RestaurantOwnerGuard`) → list orders for admin’s restaurant.
+    - `PATCH /orders/:id/status` (Restaurant Admin only) → update order status.
+    - `GET /orders/:id` (Student only) → fetch own order.
+  - `OrderModule` wired into `AppModule`.
+- **Restaurant Listing for Students:**
+  - Backend:
+    - Added `GET /restaurant/by-university/:universityId` (public) → returns restaurants for a university.
+  - Frontend:
+    - `fetchRestaurantsByUniversityPublic(universityId)` in `lib/api.ts`.
+    - `app/student/home/page.tsx`:
+      - Replaced `mockRestaurants` with backend call.
+      - Uses `checkAuth` to ensure STUDENT.
+      - Reads `selectedUniversity` from `sessionStorage` (UI-only).
+      - Loads restaurants via `fetchRestaurantsByUniversityPublic`.
+- **Restaurant Dashboard Orders Tab (Real Data):**
+  - `app/restaurant/dashboard/page.tsx`:
+    - Removed `mockData` orders and all `sessionStorage` usage for orders/reports.
+    - Added `fetchRestaurantOrders` and `updateOrderStatusApi` from `lib/api.ts`.
+    - On auth success for `RESTAURANT_ADMIN`, loads real orders from backend.
+    - `OrdersTab` now works against real `Order` objects:
+      - Uses uppercase status enums (`RECEIVED`, `PREPARING`, `READY`, etc.).
+      - Buttons call `onUpdateStatus` which hits backend and reloads list.
+    - Logout no longer clears sessionStorage (auth remains cookie-based).
+- **Student Menu + Cart → Real Order:**
+  - `app/student/restaurant/[id]/page.tsx`:
+    - Already loading menu from backend `/menu/restaurant/:id` with stock-aware availability.
+    - `handleAddToCart` now:
+      - Builds a single cart item with productId, name, computed price (including paid sauces), quantity, comment, and sauces.
+      - Encodes cart as base64 JSON and navigates to `/student/cart?restaurantId=...&cart=...`.
+    - `cartCount` no longer reads from `sessionStorage`.
+  - `app/student/cart/page.tsx`:
+    - Removed `mockData` and all `sessionStorage` usage.
+    - Cart is derived solely from URL query (`restaurantId` + `cart` base64 JSON).
+    - Uses `checkAuth` to ensure user is logged in.
+    - On checkout:
+      - Calls `createOrder({ restaurantId, items, paymentMethod: 'FAKE' })` (backend).
+      - Redirects to `/student/order/:id`.
+  - `app/student/order/[id]/page.tsx`:
+    - Removed `mockData` and sessionStorage fake status updates.
+    - Uses `checkAuth` and `fetchOrderById` (backend) to load real order.
+    - Displays real `status`, `items` (with extras), and `totalPrice`.
+    - Status messages mapped from enum values.
+- **API Utilities (`lib/api.ts`):**
+  - Added:
+    - `fetchRestaurantsByUniversityPublic(universityId)` (student).
+    - Order types: `OrderStatus`, `OrderItem`, `Order`.
+    - `createOrder(CreateOrderPayload)` – student creates order.
+    - `fetchRestaurantOrders()` – restaurant admin fetches their orders.
+    - `updateOrderStatusApi(id, status)` – restaurant admin updates status.
+    - `fetchOrderById(id)` – student fetches own order.
+
+**Files touched (major):**
+- Backend:
+  - `prisma/schema.prisma` – added `OrderStatus`, `Order`, `OrderItem`.
+  - `src/order/order.service.ts` – order logic.
+  - `src/order/order.controller.ts` – order endpoints.
+  - `src/order/order.module.ts` – module wiring.
+  - `src/restaurant/restaurant.controller.ts` – added `GET /restaurant/by-university/:universityId`.
+  - `src/app.module.ts` – imported `OrderModule`.
+- Frontend:
+  - `lib/api.ts` – restaurant public listing, order APIs and types.
+  - `app/student/home/page.tsx` – real restaurants by university.
+  - `app/restaurant/dashboard/page.tsx` – real orders in Orders tab.
+  - `app/student/restaurant/[id]/page.tsx` – add-to-cart forwards to backend cart/checkout.
+  - `app/student/cart/page.tsx` – cart → `createOrder` backend call.
+  - `app/student/order/[id]/page.tsx` – order status from backend.
+
+**Notes / assumptions:**
+- Orders are fully backend-driven; no mock `Order` usage remains.
+- No `sessionStorage` is used for orders, restaurants, or menus; only `selectedUniversity` remains as UI state.
+- Cart is passed via URL (base64 JSON) for this phase; in a full app this would typically be stateful or backend-backed.
+- Stock is not decremented on order, only validated at submit time.
+- Restaurant admins see real incoming orders from their restaurant only (via `RestaurantOwnerGuard`).
+- Students see only restaurants belonging to the selected university and real backend menus.

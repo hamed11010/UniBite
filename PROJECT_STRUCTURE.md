@@ -235,6 +235,8 @@ backend/
   - Category model with name, restaurantId
   - Product model with name, price, description, hasStock, stockQuantity, stockThreshold, manuallyOutOfStock, categoryId, restaurantId
   - ProductExtra model with name, price, productId
+  - Order model with studentId, restaurantId, totalPrice, status, createdAt
+  - OrderItem model with orderId, optional productId, productName, unitPrice, quantity, selectedExtras
 - `migrations/` - Database migration files (generated)
 
 ### Key Backend Features
@@ -275,6 +277,9 @@ backend/
 - `GET /restaurant/university/:universityId` - Get restaurants by university
 - `GET /restaurant/:id` - Get single restaurant
 
+**Restaurant (Student/Public):**
+- `GET /restaurant/by-university/:universityId` - Public list of restaurants for a university
+
 **Menu (Public):**
 - `GET /menu/restaurant/:restaurantId` - Get public menu for students (no stock numbers, only availability)
 
@@ -288,6 +293,12 @@ backend/
 - `GET /menu/product/:id` - Get single product
 - `PUT /menu/product/:id` - Update product with extras
 - `DELETE /menu/product/:id` - Delete product (cascades to extras)
+
+**Orders:**
+- `POST /orders` (Student) - Create order for a restaurant
+- `GET /orders` (Restaurant Admin) - List orders for own restaurant
+- `PATCH /orders/:id/status` (Restaurant Admin) - Update order status
+- `GET /orders/:id` (Student) - Get own order details*** End Patch```}"/>
 
 #### Security
 - Input validation (class-validator)

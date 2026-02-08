@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Order } from '@/lib/mockData'
 import { checkAuth, hasRole } from '@/lib/auth'
 import {
   fetchCategories,
@@ -13,6 +12,9 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  fetchRestaurantOrders,
+  updateOrderStatusApi,
+  type Order,
   type Category as ApiCategory,
   type Product as ApiProduct,
   type ProductExtra,
@@ -55,6 +57,8 @@ export default function RestaurantDashboard() {
   const [activeTab, setActiveTab] = useState<'orders' | 'menu' | 'reports' | 'settings'>('orders')
   const [orders, setOrders] = useState<Order[]>([])
   const [reports, setReports] = useState<any[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -69,98 +73,37 @@ export default function RestaurantDashboard() {
       }
 
       // User is authenticated and has correct role - load dashboard data
-      // Load orders
-      let allOrders = JSON.parse(sessionStorage.getItem('orders') || '[]')
-      
-      // If no orders exist, add mock orders for demo
-      if (allOrders.length === 0) {
-        const mockOrders: Order[] = [
-          {
-            id: 'order-001',
-            restaurantId: 'rest1',
-            restaurantName: 'Campus Cafe',
-            items: [
-              {
-                productId: 'prod1',
-                productName: 'Classic Burger',
-                price: 45,
-                quantity: 2,
-                comment: 'No onions please',
-                sauces: ['Ketchup', 'Mayo'],
-              },
-              {
-                productId: 'prod4',
-                productName: 'Coca Cola',
-                price: 15,
-                quantity: 2,
-              },
-            ],
-            total: 120,
-            status: 'received',
-            estimatedTime: 10,
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: 'order-002',
-            restaurantId: 'rest1',
-            restaurantName: 'Campus Cafe',
-            items: [
-              {
-                productId: 'prod2',
-                productName: 'Chicken Wrap',
-                price: 40,
-                quantity: 1,
-                sauces: ['Mayo'],
-              },
-            ],
-            total: 40,
-            status: 'preparing',
-            estimatedTime: 8,
-            createdAt: new Date(Date.now() - 5 * 60000).toISOString(),
-          },
-        ]
-        allOrders = mockOrders
-        sessionStorage.setItem('orders', JSON.stringify(mockOrders))
-      }
-      
-      // Filter orders for this restaurant (demo mode - using rest1 as default)
-      const restaurantOrders = allOrders.filter(
-        (o: Order) => o.restaurantId === 'rest1'
-      )
-      setOrders(restaurantOrders)
-
-      // Load reports for this restaurant (demo mode)
-      const allReports = JSON.parse(sessionStorage.getItem('reports') || '[]')
-      const restaurantReports = allReports.filter(
-        (r: any) => r.restaurantId === 'rest1'
-      )
-      setReports(restaurantReports)
+      await loadOrders()
     }
 
     verifyAuth()
   }, [router])
 
-  const updateOrderStatus = (orderId: string, newStatus: any) => {
-    const updatedOrders = orders.map((order) =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    )
-    setOrders(updatedOrders)
+  const loadOrders = async () => {
+    try {
+      setOrdersLoading(true)
+      setOrdersError(null)
+      const data = await fetchRestaurantOrders()
+      setOrders(data)
+    } catch (err: any) {
+      setOrdersError(err.message || 'Failed to load orders')
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
 
-    // Update in sessionStorage
-    if (typeof window !== 'undefined') {
-      const allOrders = JSON.parse(sessionStorage.getItem('orders') || '[]')
-      const updatedAllOrders = allOrders.map((o: Order) =>
-        o.id === orderId ? { ...o, status: newStatus } : o
-      )
-      sessionStorage.setItem('orders', JSON.stringify(updatedAllOrders))
+  const updateOrderStatus = async (orderId: string, newStatus: any) => {
+    try {
+      setOrdersError(null)
+      await updateOrderStatusApi(orderId, newStatus)
+      await loadOrders()
+    } catch (err: any) {
+      setOrdersError(err.message || 'Failed to update order status')
     }
   }
 
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.clear()
-      router.push('/')
-    }
+    router.push('/')
   }
 
   return (
@@ -254,7 +197,7 @@ function OrdersTab({
   onUpdateStatus: (orderId: string, status: any) => void
 }) {
   const pendingOrders = orders.filter(
-    (o) => o.status === 'received' || o.status === 'preparing' || o.status === 'ready'
+    (o) => o.status === 'RECEIVED' || o.status === 'PREPARING' || o.status === 'READY'
   )
 
   const today = new Date().toDateString()
@@ -313,16 +256,16 @@ function OrdersTab({
               </div>
 
               <div className={styles.orderActions}>
-                {order.status === 'received' && (
+                {order.status === 'RECEIVED' && (
                   <>
                     <button
-                      onClick={() => onUpdateStatus(order.id, 'preparing')}
+                      onClick={() => onUpdateStatus(order.id, 'PREPARING')}
                       className={styles.actionButton}
                     >
                       Preparing
                     </button>
                     <button
-                      onClick={() => onUpdateStatus(order.id, 'ready')}
+                      onClick={() => onUpdateStatus(order.id, 'READY')}
                       className={styles.actionButton}
                     >
                       Ready
@@ -335,32 +278,32 @@ function OrdersTab({
                     </button>
                   </>
                 )}
-                {order.status === 'preparing' && (
+                {order.status === 'PREPARING' && (
                   <>
                     <button
-                      onClick={() => onUpdateStatus(order.id, 'received')}
+                      onClick={() => onUpdateStatus(order.id, 'RECEIVED')}
                       className={styles.actionButton}
                     >
                       Received
                     </button>
                     <button
-                      onClick={() => onUpdateStatus(order.id, 'ready')}
+                      onClick={() => onUpdateStatus(order.id, 'READY')}
                       className={styles.actionButton}
                     >
                       Ready
                     </button>
                   </>
                 )}
-                {order.status === 'ready' && (
+                {order.status === 'READY' && (
                   <>
                     <button
-                      onClick={() => onUpdateStatus(order.id, 'received')}
+                      onClick={() => onUpdateStatus(order.id, 'RECEIVED')}
                       className={styles.actionButton}
                     >
                       Received
                     </button>
                     <button
-                      onClick={() => onUpdateStatus(order.id, 'preparing')}
+                      onClick={() => onUpdateStatus(order.id, 'PREPARING')}
                       className={styles.actionButton}
                     >
                       Preparing

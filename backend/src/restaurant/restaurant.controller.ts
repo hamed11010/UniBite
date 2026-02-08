@@ -34,6 +34,12 @@ export class RestaurantController {
     return this.restaurantService.findByUniversity(universityId);
   }
 
+  // Student/public - list restaurants for a university
+  @Get('by-university/:universityId')
+  async getByUniversityPublic(@Param('universityId') universityId: string) {
+    return this.restaurantService.findByUniversity(universityId);
+  }
+
   // Super Admin only - get single restaurant
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)

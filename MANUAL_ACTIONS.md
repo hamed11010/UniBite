@@ -177,6 +177,11 @@ npx prisma migrate dev --name add_university_model
 npx prisma migrate dev --name add_menu_models
 ```
 
+**Important:** After adding the Order models (Order, OrderItem) in Prompt 14, run:
+```bash
+npx prisma migrate dev --name add_order_models
+```
+
 This will:
 - Create a new migration file
 - Apply the migration to the database
