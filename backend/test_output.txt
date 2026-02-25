@@ -1,0 +1,61 @@
+
+> backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json test/phase5.e2e-spec.ts
+
+FAIL test/phase5.e2e-spec.ts
+  Phase 5 E2E - Service Fee
+    × GET /config should return default config (1 ms)
+
+  ● Phase 5 E2E - Service Fee › GET /config should return default config
+
+    PrismaClientValidationError: 
+    Invalid `prisma.university.upsert()` invocation in
+    C:\Users\ahmed\Desktop\UniBite\backend\test\phase5.e2e-spec.ts:23:41
+
+      20 
+      21 // Create a super admin to update config
+      22 // Ensure we have a university first
+    → 23 const uni = await prisma.university.upsert({
+           where: {
+             name: "Test Uni Phase 5",
+         ?   id?: String,
+         ?   AND?: UniversityWhereInput | UniversityWhereInput[],
+         ?   OR?: UniversityWhereInput[],
+         ?   NOT?: UniversityWhereInput | UniversityWhereInput[],
+         ?   allowedEmailDomains?: StringNullableListFilter,
+         ?   isActive?: BoolFilter | Boolean,
+         ?   createdAt?: DateTimeFilter | DateTime,
+         ?   users?: UserListRelationFilter,
+         ?   restaurants?: RestaurantListRelationFilter
+           },
+           update: {},
+           create: {
+             name: "Test Uni Phase 5",
+             allowedEmailDomains: [
+               "@test.com"
+             ]
+           }
+         })
+
+    Argument `where` of type UniversityWhereUniqueInput needs at least one of `id` arguments. Available options are marked with ?.
+
+    [0m [90m 21 |[39m     [90m// Create a super admin to update config[39m
+     [90m 22 |[39m     [90m// Ensure we have a university first[39m
+    [31m[1m>[22m[39m[90m 23 |[39m     [36mconst[39m uni [33m=[39m [36mawait[39m prisma[33m.[39muniversity[33m.[39mupsert({
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 24 |[39m       where[33m:[39m { name[33m:[39m [32m'Test Uni Phase 5'[39m }[33m,[39m
+     [90m 25 |[39m       update[33m:[39m {}[33m,[39m
+     [90m 26 |[39m       create[33m:[39m {[0m
+
+      at wn (../node_modules/@prisma/client/runtime/library.js:29:1363)
+      at $n.handleRequestError (../node_modules/@prisma/client/runtime/library.js:121:6958)
+      at $n.handleAndLogRequestError (../node_modules/@prisma/client/runtime/library.js:121:6623)
+      at $n.request (../node_modules/@prisma/client/runtime/library.js:121:6307)
+      at l (../node_modules/@prisma/client/runtime/library.js:130:9633)
+      at Object.<anonymous> (phase5.e2e-spec.ts:23:17)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        1.943 s, estimated 4 s
+Ran all test suites matching test/phase5.e2e-spec.ts.

@@ -16,6 +16,29 @@ enum Role {
   SUPER_ADMIN
 }
 
+enum ReportType {
+  ORDER_NOT_READY
+  WRONG_ORDER
+  CLOSED_BUT_MARKED_OPEN
+  PAYMENT_ISSUE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED_BY_RESTAURANT
+  CONFIRMED_BY_STUDENT
+  ESCALATED
+}
+
+enum NotificationType {
+  ORDER_READY
+  ORDER_CANCELLED
+  REPORT_RESOLVED
+  ESCALATION_CREATED
+  ESCALATION_RESOLVED
+}
+
 model University {
   id                  String   @id @default(uuid())
   name                String
@@ -29,17 +52,66 @@ model University {
   @@map("universities")
 }
 
+enum OrderStatus {
+  RECEIVED
+  PREPARING
+  READY
+  DELIVERED_TO_STUDENT
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CARD
+  COUNTER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CancellationReasonType {
+  OUT_OF_STOCK
+  INTERNAL_ISSUE
+  BUSY
+  OTHER
+  SYSTEM_TIMEOUT
+}
+
+enum RefundStatus {
+  NONE
+  PENDING_MANUAL_REFUND
+  REFUNDED
+  NOT_REQUIRED
+}
+
 model User {
   id           String      @id @default(uuid())
   email        String      @unique
   password     String
   role         Role
+  name         String?
+  phone        String?
+  language     String      @default("en")
   universityId String?
   university   University? @relation(fields: [universityId], references: [id])
   restaurantId String?
   restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
   isVerified   Boolean     @default(false)
+  verificationCode           String?
+  verificationCodeExpiresAt  DateTime?
+  verificationResendCount    Int      @default(0)
+  verificationResendWindow   DateTime?
+  passwordResetToken         String?
+  passwordResetExpiresAt     DateTime?
   createdAt    DateTime    @default(now())
+
+  orders       Order[]     @relation("StudentOrders")
+  reports      Report[]    @relation("StudentReports")
+  notifications Notification[]
 
   @@map("users")
 }
@@ -51,11 +123,22 @@ model Restaurant {
   university       University @relation(fields: [universityId], references: [id])
   responsibleName  String
   responsiblePhone String
-  createdAt        DateTime   @default(now())
+
+  // 🔓 Operational state
+  isOpen              Boolean @default(false)
+  openTime            String?  // e.g. "08:00"
+  closeTime           String?  // e.g. "18:00"
+  maxConcurrentOrders Int     @default(0)  // 0 = unlimited
+  isDisabled          Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  disabledAt          DateTime?
 
   users      User[]
   categories Category[]
   products   Product[]
+  orders     Order[]
+  reports    Report[]
 
   @@map("restaurants")
 }
@@ -87,9 +170,59 @@ model Product {
   restaurant         Restaurant @relation(fields: [restaurantId], references: [id])
   createdAt          DateTime   @default(now())
 
-  extras ProductExtra[]
+  extras     ProductExtra[]
+  orderItems OrderItem[]
 
   @@map("products")
+}
+
+model Order {
+  id             String        @id @default(uuid())
+  orderNumber    Int           @unique @default(autoincrement())
+  posOrderNumber String?
+  studentId      String
+  student        User          @relation("StudentOrders", fields: [studentId], references: [id])
+  restaurantId   String
+  restaurant     Restaurant    @relation(fields: [restaurantId], references: [id])
+  status         OrderStatus   @default(RECEIVED)
+  subtotal       Float
+  serviceFee     Float         @default(0)
+  serviceFeeCollected Boolean  @default(false)
+  total          Float
+  paymentMethod  PaymentMethod @default(CARD)
+  paymentStatus  PaymentStatus @default(PENDING)
+  cardLast4      String?
+  readyAt                DateTime?
+  deliveredAt            DateTime?
+  completedAt            DateTime?
+  cancellationReasonType CancellationReasonType?
+  cancellationComment    String?
+  cancelledAt            DateTime?
+  cancelledByRole        Role?
+  refundStatus           RefundStatus @default(NONE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  
+  items          OrderItem[]
+  reports        Report[]
+  @@index([restaurantId, status])
+  @@index([studentId])
+  @@index([createdAt])
+  @@index([restaurantId, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id             String  @id @default(uuid())
+  orderId        String
+  order          Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product @relation(fields: [productId], references: [id])
+  quantity       Int
+  priceSnapshot  Float
+  extrasSnapshot Json?   // Stored as JSON to avoid complex relations for historical data
+  comment        String?
+  @@map("order_items")
 }
 
 model ProductExtra {
@@ -100,4 +233,51 @@ model ProductExtra {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@map("product_extras")
+}
+
+model GlobalConfig {
+  id                 Int     @id @default(1)
+  serviceFeeEnabled  Boolean @default(false)
+  serviceFeeAmount   Float   @default(0.0)
+  orderingEnabled    Boolean @default(true)
+  maintenanceMode    Boolean @default(false)
+  maintenanceMessage String?
+
+  updatedAt DateTime @updatedAt
+
+  @@map("global_config")
+}
+
+model Report {
+  id            String       @id @default(uuid())
+  studentId     String
+  student       User         @relation("StudentReports", fields: [studentId], references: [id])
+  restaurantId  String
+  restaurant    Restaurant   @relation(fields: [restaurantId], references: [id])
+  orderId       String?
+  order         Order?       @relation(fields: [orderId], references: [id])
+  type          ReportType
+  comment       String?
+  status        ReportStatus @default(PENDING)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status])
+  @@index([restaurantId])
+  @@map("reports")
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }

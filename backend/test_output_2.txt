@@ -1,0 +1,27 @@
+
+> backend@0.0.1 test:e2e
+> jest --config ./test/jest-e2e.json test/phase5.e2e-spec.ts
+
+FAIL test/phase5.e2e-spec.ts
+  Phase 5 E2E - Service Fee
+    × GET /config should return default config (2 ms)
+
+  ● Phase 5 E2E - Service Fee › GET /config should return default config
+
+    TypeError: request is not a function
+
+    [0m [90m 44 |[39m     
+     [90m 45 |[39m     [90m// Signup[39m
+    [31m[1m>[22m[39m[90m 46 |[39m     [36mawait[39m request(app[33m.[39mgetHttpServer())
+     [90m    |[39m           [31m[1m^[22m[39m
+     [90m 47 |[39m       [33m.[39mpost([32m'/auth/signup'[39m)
+     [90m 48 |[39m       [33m.[39msend({
+     [90m 49 |[39m         email[33m:[39m [32m'superadmin_p5@test.com'[39m[33m,[39m[0m
+
+      at Object.<anonymous> (phase5.e2e-spec.ts:46:11)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        2.448 s
+Ran all test suites matching test/phase5.e2e-spec.ts.

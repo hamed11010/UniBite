@@ -1,0 +1,19 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "unibite_db", schema "public" at "localhost:5432"
+
+
+Error: Prisma schema validation - (validate wasm)
+Error code: P1012
+[1;91merror[0m: [1mError validating field `order` in model `Report`: The relation field `order` on model `Report` is missing an opposite relation field on the model `Order`. Either run `prisma format` or add it manually.[0m
+  [1;94m-->[0m  [4mprisma\schema.prisma:197[0m
+[1;94m   | [0m
+[1;94m196 | [0m  orderId       String?
+[1;94m197 | [0m  [1;91morder         Order?       @relation(fields: [orderId], references: [id])[0m
+[1;94m198 | [0m  type          ReportType
+[1;94m   | [0m
+
+Validation Error Count: 1
+[Context: validate]
+
+Prisma CLI Version : 5.22.0

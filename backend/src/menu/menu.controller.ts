@@ -6,6 +6,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Request,
 } from '@nestjs/common';
@@ -78,7 +79,7 @@ export class MenuController {
   @Get('product')
   @UseGuards(JwtAuthGuard, RolesGuard, RestaurantOwnerGuard)
   @Roles(Role.RESTAURANT_ADMIN)
-  async getProducts(@Request() req, @Param('categoryId') categoryId?: string) {
+  async getProducts(@Request() req, @Query('categoryId') categoryId?: string) {
     return this.menuService.getProducts(req.restaurantId, categoryId);
   }
 

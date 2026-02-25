@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 
 @Injectable()
 export class MenuService {
@@ -95,9 +97,9 @@ export class MenuService {
   }
 
   // Products
-  async createProduct(restaurantId: string, createProductDto: any) {
+  async createProduct(restaurantId: string, createProductDto: CreateProductDto) {
     // Verify category belongs to restaurant
-    const category = await this.getCategory(
+    await this.getCategory(
       createProductDto.categoryId,
       restaurantId,
     );
@@ -123,7 +125,7 @@ export class MenuService {
     // Create extras if provided
     if (createProductDto.extras && createProductDto.extras.length > 0) {
       await this.prisma.productExtra.createMany({
-        data: createProductDto.extras.map((extra: any) => ({
+        data: createProductDto.extras.map((extra) => ({
           name: extra.name,
           price: extra.price || 0,
           productId: product.id,
@@ -135,10 +137,9 @@ export class MenuService {
   }
 
   async getProducts(restaurantId: string, categoryId?: string) {
-    const where: any = { restaurantId };
-    if (categoryId) {
-      where.categoryId = categoryId;
-    }
+    const where: Prisma.ProductWhereInput = categoryId
+      ? { restaurantId, categoryId }
+      : { restaurantId };
 
     return this.prisma.product.findMany({
       where,
@@ -203,16 +204,16 @@ export class MenuService {
   async updateProduct(
     productId: string,
     restaurantId: string,
-    updateProductDto: any,
+    updateProductDto: UpdateProductDto,
   ) {
-    const existingProduct = await this.getProduct(productId, restaurantId);
+    await this.getProduct(productId, restaurantId);
 
     // If categoryId is being updated, verify new category belongs to restaurant
     if (updateProductDto.categoryId) {
       await this.getCategory(updateProductDto.categoryId, restaurantId);
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.ProductUncheckedUpdateInput = {};
 
     if (updateProductDto.name !== undefined) {
       updateData.name = updateProductDto.name;
@@ -263,8 +264,8 @@ export class MenuService {
       // Create new extras
       if (updateProductDto.extras.length > 0) {
         await this.prisma.productExtra.createMany({
-          data: updateProductDto.extras.map((extra: any) => ({
-            name: extra.name,
+          data: updateProductDto.extras.map((extra) => ({
+            name: extra.name as string,
             price: extra.price || 0,
             productId,
           })),

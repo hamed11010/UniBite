@@ -1,10 +1,3 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { BaseUserCredentialsDto } from './base-user-credentials.dto';
 
-export class CreateUserDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(8)
-  password: string;
-}
+export class CreateUserDto extends BaseUserCredentialsDto {}

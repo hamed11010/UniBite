@@ -1,13 +1,7 @@
-import { IsEmail, IsString, MinLength, IsUUID } from 'class-validator';
+import { IsUUID } from 'class-validator';
+import { BaseUserCredentialsDto } from '../../users/dto/base-user-credentials.dto';
 
-export class SignupDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(8)
-  password: string;
-
+export class SignupDto extends BaseUserCredentialsDto {
   @IsUUID()
   universityId: string;
 }
