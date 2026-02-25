@@ -16,6 +16,19 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
+.logoWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.authLogo {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  object-fit: contain;
+}
+
 .title {
   font-size: 28px;
   font-weight: 700;
@@ -93,6 +106,39 @@
   border-radius: 8px;
   margin-top: 10px;
   transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.googleButton {
+  padding: 12px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  cursor: pointer;
+  opacity: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.googleButton:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.googleButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.googleIcon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .submitButton:hover {

@@ -16,6 +16,46 @@
   z-index: 10;
 }
 
+.categoryNavWrapper {
+  position: sticky;
+  top: 74px;
+  z-index: 9;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.categoryNav {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.categoryNavButton {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid #d8ddff;
+  background: #f5f7ff;
+  color: #4d5fc6;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.categoryNavButton:hover {
+  background: #e8edff;
+}
+
+.categoryNavButtonActive {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
 .backButton {
   background: none;
   color: #667eea;
@@ -61,6 +101,7 @@
 
 .categorySection {
   margin-bottom: 40px;
+  scroll-margin-top: 170px;
 }
 
 .categoryTitle {
@@ -101,7 +142,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 48px;
+}
+
+.placeholderLogo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  opacity: 0.3;
 }
 
 .productInfo {
@@ -131,10 +178,7 @@
 /* Modal Styles */
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -157,7 +201,7 @@
 .modalClose {
   position: absolute;
   top: 16px;
-  right: 16px;
+  inset-inline-end: 16px;
   background: none;
   font-size: 32px;
   color: #999;
@@ -226,6 +270,18 @@
 
 .saucesSection {
   margin-bottom: 24px;
+}
+
+.expandToggleButton {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: start;
 }
 
 .saucesSection label:first-child {
@@ -364,4 +420,27 @@
   font-weight: 600;
   color: #333;
   margin-bottom: 12px;
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .restaurantName {
+    font-size: 18px;
+  }
+
+  .headerActions {
+    gap: 8px;
+  }
+
+  .categoryNavWrapper {
+    top: 72px;
+  }
+
+  .categoryNav {
+    padding: 8px 12px;
+  }
 }

@@ -1056,3 +1056,1164 @@ Integrate restaurant menu and stock management with backend and database:
 - Products can be deleted (cascades to extras)
 - All menu operations require RESTAURANT_ADMIN role
 - Menu is scoped to restaurant (cannot access other restaurants' menus)
+
+## Prompt 14 - Continue From Phase 7 and Phase 8
+
+**What was requested:**
+Continue implementation from Phase 7 and Phase 8 only (post-stabilization), with no architecture refactor:
+1. **Phase 7 (Student UX):**
+   - Integrate SweetAlert2 properly
+   - Replace remaining `alert()` and `confirm()` usage
+   - Improve busy/closed messaging
+   - Add sticky horizontal category navigator on student restaurant page
+   - Smooth scrolling to menu sections
+2. **Phase 8 (Super Admin Dashboard):**
+   - Improve dashboard clarity
+   - Add order history analytics per restaurant using existing backend data
+   - Show: total orders, total revenue, cancelled, completed
+   - Keep backend-only data source and avoid schema changes
+
+**What was implemented:**
+- Completed mandatory architecture/state audit before coding:
+  - Verified schema, app module wiring, order/report/config services, and rule enforcement from Phases 1-6.
+- Implemented Phase 7:
+  - Added sticky horizontal category navigation bar in student menu page.
+  - Added active category tracking based on scroll position.
+  - Added smooth scroll to category sections.
+  - Replaced remaining native `confirm()` in restaurant dashboard product deletion flow with SweetAlert2.
+  - Replaced remaining native `alert()` in verify page resend action with SweetAlert2.
+  - Improved student busy/closed restaurant SweetAlert copy and fixed busy badge style usage.
+- Implemented Phase 8:
+  - Added frontend analytics helper to derive per-restaurant metrics from existing backend order endpoint.
+  - Added super admin "Order History Snapshot" section and per-restaurant analytics cards.
+  - Displayed metrics: total orders, total revenue, cancelled, completed.
+  - Kept current architecture and module boundaries unchanged.
+- Verified builds and validation:
+  - Frontend TypeScript check passed (`npx tsc --noEmit`)
+  - Frontend build passed (`npm run build`)
+  - Backend build passed (`npm run build`)
+  - Prisma validation passed (`npx prisma validate`)
+
+**Files touched:**
+- `app/student/restaurant/[id]/page.tsx` - Added sticky category navigator, active section tracking, smooth scrolling
+- `app/student/restaurant/[id]/menu.module.css` - Added category nav and responsive sticky styles
+- `app/restaurant/dashboard/page.tsx` - Replaced product delete `confirm()` with SweetAlert2 dialog
+- `app/auth/verify/page.tsx` - Replaced resend `alert()` with SweetAlert2
+- `app/student/home/page.tsx` - Improved busy/closed SweetAlert messaging, fixed busy badge usage
+- `app/student/home/home.module.css` - Added `statusBusy` style
+- `lib/api.ts` - Added `fetchRestaurantOrderAnalytics()` and related analytics types
+- `app/admin/dashboard/page.tsx` - Added analytics loading/aggregation and order history metrics UI
+- `app/admin/dashboard/admin.module.css` - Added analytics card/layout styles
+- `PROMPT_LOG.md` - Added Prompt 14 documentation
+- `PROJECT_STRUCTURE.md` - Updated to match current project structure
+
+**Notes / assumptions:**
+- No Prisma schema changes were made in this prompt.
+- No backend architecture refactor was introduced.
+- Phase 8 analytics are computed from existing `/order/restaurant/:restaurantId` backend data route to preserve current structure.
+
+## Prompt 15 - Super Admin Layout Refactor & University Navigation Fix
+
+**What was requested:**
+1. Refactor Super Admin dashboard into a structured sidebar + section layout.
+2. Add "Change University" navigation on login and signup pages.
+3. Move restaurant open reminder to dashboard mount (not Settings tab).
+4. Preserve existing APIs, guards, auth flow, and backend logic.
+5. Update project documentation.
+
+**What was implemented:**
+- Refactored Super Admin dashboard UI into a two-column layout:
+  - Left sidebar navigation with sections: Overview, Universities, Restaurants, Order Analytics, Escalated Reports.
+  - Section-based rendering using `activeSection` local state.
+- Reorganized existing Super Admin content without changing logic:
+  - Overview cards and global settings under Overview.
+  - University selector + university creation/list/edit under Universities.
+  - Restaurant management under Restaurants.
+  - Order analytics summary/per-restaurant metrics under Order Analytics.
+  - Added Escalated Reports placeholder section for future implementation.
+- Added "Change University" button to both auth pages:
+  - Clears `sessionStorage.selectedUniversity`.
+  - Redirects to `/`.
+  - Placed below page title as a small secondary-styled button.
+- Relocated restaurant open reminder logic:
+  - Reminder now runs on restaurant dashboard mount after auth check.
+  - Checks settings once and triggers SweetAlert2 info reminder when opening time has started and restaurant is still closed.
+  - Added local state flag to prevent duplicate reminder triggers.
+  - Removed old reminder logic from Settings tab.
+- Verified frontend TypeScript compilation with `npx tsc --noEmit`.
+
+**Files touched:**
+- `app/admin/dashboard/page.tsx` - Added sidebar navigation, section-based rendering, and content reorganization.
+- `app/admin/dashboard/admin.module.css` - Added dashboard layout/sidebar/main-content styles.
+- `app/auth/login/page.tsx` - Added "Change University" button and behavior.
+- `app/auth/signup/page.tsx` - Added "Change University" button and behavior.
+- `app/restaurant/dashboard/page.tsx` - Moved open reminder to dashboard mount and removed Settings-tab reminder.
+- `PROMPT_LOG.md` - Added Prompt 15 documentation.
+- `PROJECT_STRUCTURE.md` - Updated documentation status note.
+
+**Notes / assumptions:**
+- No backend code, Prisma schema, routes, or API contracts were modified.
+- Existing auth and dashboard data flows were preserved; this prompt is a UI/render-organization refactor plus targeted UX fixes.
+
+## Prompt 16 - Manual Open/Close System Stabilization & Settings UX Upgrade
+
+**What was requested:**
+1. Stabilize restaurant availability rules (no auto-open, auto-close at closeTime, manual open/close support).
+2. Audit existing backend availability logic before implementing.
+3. Ensure restaurant settings endpoint supports `isOpen` updates.
+4. Upgrade restaurant Settings tab UX with explicit Manual Availability and Working Hours sections.
+5. Ensure student-side availability relies on backend state and remove schedule-based frontend calculations if present.
+6. Validate frontend/backend builds and document changes.
+
+**What was implemented:**
+- **Backend audit results:**
+  - `backend/src/restaurant/restaurant.service.ts` already had auto-close logic (`autoCloseIfNeeded`) and no auto-open logic.
+  - `backend/src/menu/menu.service.ts` had no time-based restaurant availability logic.
+- **Availability rule stabilization (backend):**
+  - Kept existing auto-close behavior and made returned availability explicit in public restaurant payload:
+    - If current time is past `closeTime`, returned `isOpen` is forced to `false`.
+    - Otherwise returned `isOpen` follows persisted state.
+  - Kept schedule behavior manual for opening (no auto-open introduced).
+- **Manual open/close persistence fix (backend):**
+  - Extended settings DTO and service update logic to accept and persist `isOpen`.
+  - `updateSettings` now updates `isOpen`, `openTime`, `closeTime`, and `maxConcurrentOrders` without recalculating/overwriting `isOpen` afterward.
+- **Manual close support via settings endpoint (backend):**
+  - `PUT /restaurant/:id/settings` now accepts `isOpen: true/false` directly.
+  - This allows both manual open and manual close through one endpoint.
+- **Restaurant dashboard Settings UX upgrade (frontend):**
+  - Reworked Settings tab into two clear cards:
+    - `Manual Availability` (OPEN/CLOSED badge + large switch control).
+    - `Working Hours` (open/close times + max concurrent orders).
+  - Toggle now calls backend settings endpoint with `isOpen`.
+  - Added SweetAlert success feedback for manual open/close and working-hours save.
+  - Added request guards (`savingSettings`, `updatingAvailability`) to prevent duplicate submissions.
+- **Student-side audit:**
+  - Reviewed `app/student/home/page.tsx` and `app/student/restaurant/[id]/page.tsx`.
+  - No schedule-based availability calculations were present; student availability remains backend-driven via `isOpen`.
+- **Validation:**
+  - Backend build passed (`npm run build` in `backend/`).
+  - Frontend build passed (`npm run build` in project root).
+
+**Files touched:**
+- `backend/src/restaurant/dto/update-restaurant-settings.dto.ts` - Added optional `isOpen` boolean.
+- `backend/src/restaurant/restaurant.service.ts` - Added `isOpen` persistence in settings update and explicit closeTime-based availability return logic.
+- `app/restaurant/dashboard/page.tsx` - Upgraded Settings tab UX and switched manual availability updates to settings endpoint.
+- `app/restaurant/dashboard/dashboard.module.css` - Added styling for settings cards, availability badge/switch, and submission states.
+- `PROMPT_LOG.md` - Added Prompt 16 documentation.
+
+**Notes / assumptions:**
+- No Prisma schema changes were required.
+- Existing auth, orders, analytics, and reports flows were preserved.
+- Existing `/restaurant/:id/open` and `/restaurant/:id/close` endpoints remain available; frontend manual availability now uses `/restaurant/:id/settings` for stable persisted toggling.
+
+## Prompt 17 - Professional Notification Counter System
+
+**What was requested:**
+1. Add Restaurant Admin notification counters for pending orders and unhandled reports.
+2. Use smart polling (no WebSockets).
+3. Reuse existing enums/statuses and guards.
+4. Keep existing auth/order/report/availability/analytics logic stable.
+
+**Enum audit result (no enum/schema changes):**
+- `OrderStatus` values in schema: `RECEIVED`, `PREPARING`, `READY`, `DELIVERED`, `CANCELLED`.
+  - Notification counter uses `OrderStatus.RECEIVED` as the "awaiting restaurant action" state in current workflow.
+- `ReportStatus` values in schema: `PENDING`, `RESOLVED_BY_RESTAURANT`, `CONFIRMED_BY_STUDENT`, `ESCALATED`.
+  - Notification counter treats `ReportStatus.RESOLVED_BY_RESTAURANT` as the handled-by-restaurant status.
+- Added inline code comments in services explaining these choices.
+
+**What was implemented:**
+- **Backend - Orders**
+  - Added `countPendingOrdersForRestaurant(restaurantId)` in order service.
+  - Added endpoint: `GET /order/restaurant/:restaurantId/pending-count`.
+  - Route protection: `JwtAuthGuard`, `RolesGuard`, `RestaurantOwnerGuard`, role `RESTAURANT_ADMIN`.
+- **Backend - Reports**
+  - Added `countUnhandledReportsForRestaurant(restaurantId)` in report service.
+  - Added endpoint: `GET /report/restaurant/:restaurantId/unhandled-count`.
+  - Route protection: `JwtAuthGuard`, `RolesGuard`, `RestaurantOwnerGuard`, role `RESTAURANT_ADMIN`.
+- **Frontend API**
+  - Added `fetchPendingOrdersCount(restaurantId)`.
+  - Added `fetchUnhandledReportsCount(restaurantId)`.
+  - Both use `credentials: 'include'` and existing API base URL logic with error handling.
+- **Restaurant Dashboard UI**
+  - Added state counters:
+    - `pendingOrdersCount`
+    - `unhandledReportsCount`
+  - Added smart polling for counts:
+    - immediate fetch on restaurant load
+    - `setInterval` every 15 seconds
+    - refresh on `window` focus
+    - cleanup on unmount
+  - Added tab badges:
+    - `Orders` shows red badge when `pendingOrdersCount > 0`
+    - `Reports` shows red badge when `unhandledReportsCount > 0`
+    - hidden when count is zero
+  - Added report handling action in reports tab (`Mark Handled`) for `PENDING` reports, followed by counts refresh.
+  - Wired order status updates from `RestaurantOrdersView` to refresh counters after status change.
+
+**Files touched:**
+- `backend/src/order/order.service.ts` - Added pending-order counter method.
+- `backend/src/order/order.controller.ts` - Added pending-order counter route with owner guard protection.
+- `backend/src/report/report.service.ts` - Added unhandled-report counter method.
+- `backend/src/report/report.controller.ts` - Added unhandled-report counter route with owner guard protection.
+- `lib/api.ts` - Added frontend counter API functions.
+- `app/restaurant/dashboard/page.tsx` - Added counter state, smart polling, badge rendering, and report handled refresh flow.
+- `app/restaurant/dashboard/dashboard.module.css` - Added badge and tab-label styles (plus report action button styling).
+- `components/RestaurantOrdersView.tsx` - Added optional callback to trigger counter refresh on order status updates.
+- `PROMPT_LOG.md` - Added Prompt 17 documentation.
+
+**Validation:**
+- Backend build passed (`npm run build` in `backend/`).
+- Frontend build passed (`npm run build` in project root).
+
+**Notes / assumptions:**
+- No Prisma schema changes were made.
+- No WebSocket logic was introduced; polling strategy is interval + focus refresh only.
+
+## Prompt 18 - VIP Order Cancellation & Refund System
+
+**What was requested:**
+1. Extend `Order` schema with public `orderNumber`, cancellation metadata, and refund status.
+2. Add secure restaurant-only cancellation endpoint with structured reason and manual refund flow.
+3. Add cancellation UI flow for restaurant dashboard with SweetAlert reason modal.
+4. Add student cancellation SweetAlert and reason/refund visibility.
+5. Add mandatory order placement confirmation in cart.
+6. Preserve availability logic, service fee logic, notification counters, and order status machine integrity.
+
+**Schema changes (audited and applied without duplication):**
+- Updated `backend/prisma/schema.prisma`:
+  - Added enum `CancellationReasonType` (`OUT_OF_STOCK`, `INTERNAL_ISSUE`, `BUSY`, `OTHER`)
+  - Added enum `RefundStatus` (`NONE`, `PENDING_MANUAL_REFUND`, `REFUNDED`, `NOT_REQUIRED`)
+  - Extended `Order` model with:
+    - `orderNumber Int @unique @default(autoincrement())`
+    - `cancellationReasonType CancellationReasonType?`
+    - `cancellationComment String?`
+    - `cancelledAt DateTime?`
+    - `cancelledByRole Role?`
+    - `refundStatus RefundStatus @default(NONE)`
+  - Preserved UUID primary key `id` unchanged.
+
+**Migration:**
+- Added migration folder:
+  - `backend/prisma/migrations/20260217141000_add_order_cancellation_and_refund_fields/migration.sql`
+- Migration actions:
+  - Created `CancellationReasonType` and `RefundStatus` enums.
+  - Added new cancellation/refund columns to `orders`.
+  - Added `orderNumber` with sequence-backed autoincrement behavior.
+  - Backfilled existing rows with unique `orderNumber`.
+  - Added unique index `orders_orderNumber_key`.
+
+**Backend changes:**
+- Added DTO:
+  - `backend/src/order/dto/cancel-order-by-restaurant.dto.ts`
+  - Validates `reasonType` enum and requires `comment` when reason is `OTHER`.
+- Updated service:
+  - `backend/src/order/order.service.ts`
+  - Added `cancelOrderByRestaurant(orderId, reasonType, comment?)`:
+    - allows cancellation only from `RECEIVED` or `PREPARING`
+    - stores reason/comment/cancel metadata
+    - sets `status = CANCELLED`
+    - sets `refundStatus` for `DEMO` payment using global service fee setting:
+      - service fee enabled -> `PENDING_MANUAL_REFUND`
+      - service fee disabled -> `NOT_REQUIRED`
+  - Hardened generic status patch flow to reject direct `CANCELLED` transition and require dedicated cancel endpoint for structured tracking.
+- Updated controller:
+  - `backend/src/order/order.controller.ts`
+  - Added `POST /order/:id/cancel`
+  - Protected with `JwtAuthGuard`, `RolesGuard`, `RestaurantOwnerGuard`, role `RESTAURANT_ADMIN`.
+  - Reuses ownership access check before invoking cancellation service method.
+
+**Frontend updates:**
+- Restaurant side:
+  - `components/RestaurantOrdersView.tsx`
+  - Added `Cancel Order` button only for `received` and `preparing` orders.
+  - Added SweetAlert cancellation modal with reason dropdown and conditional textarea for `OTHER`.
+  - Calls `POST /order/:id/cancel` and refreshes orders + notification counters callback.
+  - Removed ready-state cancellation action and aligned status actions with backend transitions.
+  - Switched displayed public reference to `orderNumber`.
+- Student side:
+  - `app/student/order/[id]/page.tsx`
+  - Added cancellation-aware order typing (`refundStatus`, `cancellationReasonType`, `cancellationComment`, `orderNumber`).
+  - Shows SweetAlert titled `Order Cancelled` with refund-status-specific text.
+  - Displays cancellation reason and optional comment clearly in page content.
+- Cart confirmation:
+  - `app/student/cart/page.tsx`
+  - Added mandatory pre-submit SweetAlert confirmation:
+    - Title: `Confirm Order`
+    - Text: `After placing this order, it cannot be edited or cancelled.`
+  - Existing service fee and order creation payload logic preserved.
+
+**No-duplication / safety policy confirmation:**
+- Reused existing `Role` and `OrderStatus` enums; no duplicate fields/enums introduced.
+- UUID `Order.id` remains primary key.
+- Availability logic untouched.
+- Service fee computation at order creation untouched.
+- Notification counter flow preserved and refreshed after cancellation.
+
+## Prompt 19 - Payment Method Backend Foundation
+
+**What was requested:**
+1. Replace `PaymentMethod` enum from `DEMO` to `CARD | COUNTER`.
+2. Extend `Order` with secure card metadata (`cardLast4` only).
+3. Extend `CreateOrderDto` with payment + card inputs and strict validation.
+4. Update order creation logic to persist only `cardLast4`, never full card data.
+5. Keep cancellation, notification counters, and service fee logic stable.
+6. Add migration mapping existing DB payment value `DEMO -> COUNTER`.
+7. Backend-only phase (no frontend UI changes).
+
+**What was implemented:**
+- **Schema updates (`backend/prisma/schema.prisma`):**
+  - `PaymentMethod` changed to:
+    - `CARD`
+    - `COUNTER`
+  - `Order.paymentMethod` default changed from `DEMO` to `COUNTER`.
+  - Added `Order.cardLast4 String?`.
+  - UUID `Order.id` remained the primary key unchanged.
+
+- **Migration (`backend/prisma/migrations/20260217152000_payment_method_backend_foundation/migration.sql`):**
+  - Added nullable `cardLast4` column.
+  - Replaced enum type using `PaymentMethod_new`.
+  - Safely remapped existing rows:
+    - `DEMO -> COUNTER`
+  - Swapped enum types and restored default `paymentMethod = COUNTER`.
+
+- **DTO updates (`backend/src/order/dto/create-order.dto.ts`):**
+  - Added required `paymentMethod: PaymentMethod`.
+  - Added optional card input fields:
+    - `cardNumber`
+    - `cardHolderName`
+    - `expiryMonth`
+    - `expiryYear`
+    - `cvv`
+  - Added CARD-specific validation rules:
+    - `cardNumber`: required for CARD, sanitized (dashes/spaces removed), exactly 16 digits.
+    - `cardHolderName`: required for CARD, letters and spaces only.
+    - `expiryMonth`: required for CARD, integer 1..12.
+    - `expiryYear`: required for CARD, integer >= current year.
+    - Cross-field expiry validation: if current year, month must be current month or later.
+    - `cvv`: required for CARD, exactly 3 digits.
+  - For `COUNTER`, card fields are ignored by validation (`ValidateIf` guards).
+
+- **Order service updates (`backend/src/order/order.service.ts`):**
+  - In `create(...)`:
+    - Reads `paymentMethod` from DTO.
+    - Runs explicit server-side CARD validation and sanitization.
+    - Persists only `cardLast4` (`sanitizedCardNumber.slice(-4)`) for CARD.
+    - Persists `cardLast4 = null` for COUNTER.
+    - Does **not** store full card number, CVV, expiry month/year, or holder name.
+    - Service fee computation logic remains unchanged.
+  - Cancellation flow:
+    - Removed dependency on `PaymentMethod.DEMO`.
+    - Uses current enum values:
+      - `CARD` -> `PENDING_MANUAL_REFUND`
+      - `COUNTER` -> `NOT_REQUIRED`
+    - Existing cancellation stage checks and status machine remained intact.
+
+**Security notes:**
+- No full card number persistence.
+- No CVV persistence.
+- No expiry persistence.
+- No added logging of payment card fields.
+- Stored payment metadata is limited to `paymentMethod` and `cardLast4`.
+
+**Validation / build results:**
+- Prisma schema validation passed (`npx prisma validate`).
+- Prisma client generation passed (`npx prisma generate`).
+- Migration deployment passed (`npx prisma migrate deploy`).
+- Migration status confirmed up-to-date (`npx prisma migrate status`).
+- Backend build passed (`npm run build` in `backend/`).
+
+**No frontend changes in this phase:**
+- Confirmed. This prompt modified backend schema, migration, DTO, and service logic only.
+
+## Prompt 20 - Professional Frontend Payment System
+
+**What was requested:**
+- Upgrade cart checkout UX with professional payment selection and card form.
+- Add real-world frontend card validation with inline errors.
+- Keep existing service fee logic and order confirmation SweetAlert unchanged.
+- Send secure checkout payload compatible with backend `PaymentMethod` + CARD fields.
+- Do not store card data in session storage and do not log sensitive values.
+
+**Audit confirmations before coding:**
+- `PaymentMethod` enum is `CARD | COUNTER` in schema.
+- Backend create-order DTO expects `paymentMethod` and conditional card fields.
+- Backend order service already stores only `cardLast4` and preserves service-fee logic.
+- Existing checkout confirmation SweetAlert already exists in cart and was preserved.
+
+**What was implemented:**
+- Updated `app/student/cart/page.tsx`:
+  - Added controlled payment method selection:
+    - `CARD`
+    - `COUNTER` (default)
+  - Added conditional card form rendered only for `CARD` with fields:
+    - Card Number
+    - Card Holder Name
+    - Expiry Month
+    - Expiry Year
+    - CVV
+  - Added frontend validation helpers (single shared validation flow, no duplicate blocks):
+    - Card number formatting `1234-5678-9012-3456`
+    - Internal sanitization to digits-only for validation and payload
+    - Exact 16-digit card number requirement
+    - Card holder letters/spaces only, min length 3
+    - Expiry month dropdown `01..12`
+    - Expiry year dropdown `currentYear..currentYear+10`
+    - Expiry not-in-past cross-check
+    - CVV exactly 3 digits
+  - Added inline error rendering for field-level validation (no SweetAlert for field errors).
+  - Disabled checkout when `CARD` is selected and card validation fails.
+  - Preserved existing SweetAlert behavior for:
+    - final confirmation
+    - success
+    - backend/server errors
+  - Extended checkout payload securely:
+    - always sends `paymentMethod`
+    - sends sanitized card fields only when `paymentMethod === CARD`
+  - Added secure UX note under card form:
+    - `🔒 Your card details are encrypted and never stored.`
+
+- Updated `app/student/cart/cart.module.css`:
+  - Added professional payment/card form styles:
+    - `.paymentSection`
+    - `.paymentOption`
+    - `.cardForm`
+    - `.inputGroup`
+    - `.inputError`
+    - `.row`
+    - `.secureNote`
+  - Added disabled checkout button styling and responsive row behavior.
+
+**Security notes:**
+- No card data persisted to `sessionStorage`.
+- No logging of card number/CVV was introduced.
+- Card number is sanitized before request payload and never stored outside component state.
+
+**Preservation checks:**
+- Service fee calculation logic remained unchanged.
+- Existing cart item/session flow remained unchanged.
+- Existing redirect-after-success behavior remained unchanged.
+- Existing confirmation SweetAlert text/flow remained intact.
+
+**Validation / build results:**
+- Frontend type-check passed: `npx tsc --noEmit`
+- Frontend build passed: `npm run build` (root)
+- Backend build passed: `npm run build` (backend)
+
+## Prompt 21 — Operational Clarity & Platform Revenue Engine
+
+**What was requested:**
+- Add POS order mapping support (`posOrderNumber`) for restaurant admins in backend + restaurant dashboard.
+- Add service-fee accounting analytics for Super Admin with strict counting rules by payment method.
+- Keep order creation, service-fee calculation, refund, cancellation, and payment validation logic unchanged.
+- Run mandatory validation commands and document the implementation.
+
+**What was implemented:**
+- **Order POS mapping (backend):**
+  - Added nullable field `posOrderNumber String?` to `Order` in Prisma schema.
+  - Added DTO `UpdateOrderPosDto` with:
+    - optional string input
+    - trim transform
+    - max length 50
+  - Added endpoint `PATCH /order/:id/pos`:
+    - guards: `JwtAuthGuard`, `RolesGuard`, `RestaurantOwnerGuard`
+    - role: `RESTAURANT_ADMIN`
+  - Added secure service method to update POS reference only for the owning restaurant admin.
+
+- **Order POS mapping (restaurant dashboard):**
+  - Updated order cards to show:
+    - `UniBite Order #: <orderNumber>`
+    - `POS Reference (optional)` input
+  - Added per-order `Save` button for POS reference.
+  - Added saving state with disabled button while request is in progress.
+  - Added SweetAlert success/error feedback.
+  - Added persistent highlighted reminder banner at top of Orders tab:
+    - `To avoid confusion during pickup, please write the UniBite order number on the printed receipt or record your POS reference here.`
+
+- **Service Fee Accounting Engine (backend):**
+  - Added `getServiceFeeAnalytics()` in `OrderService`.
+  - Added endpoint `GET /order/service-fee-analytics` (role: `SUPER_ADMIN`).
+  - Aggregation returns per restaurant:
+    - `totalServiceFeeLifetime`
+    - `totalServiceFeeCurrentMonth`
+    - `totalCardFees`
+    - `totalCounterFeesDelivered`
+    - `contributingOrdersCount`
+  - Rule logic implemented exactly:
+    - `CARD` orders always contribute (counted immediately).
+    - `COUNTER` orders contribute only when `status === DELIVERED`.
+  - Date window for current month:
+    - first day of current month through now.
+  - If `serviceFeeEnabled === false`, response indicates disabled state for UI messaging.
+
+- **Service Fee Accounting (Super Admin dashboard):**
+  - Added dedicated sidebar section: `Service Fee Accounting`.
+  - Added UI cards per restaurant showing only platform fee metrics (no food revenue).
+  - Added disabled-state banner:
+    - `Service fee is currently disabled. No platform revenue is being collected.`
+
+**Files touched:**
+- `backend/prisma/schema.prisma`
+- `backend/prisma/migrations/20260217170000_add_pos_order_number/migration.sql`
+- `backend/src/order/dto/update-order-pos.dto.ts`
+- `backend/src/order/order.controller.ts`
+- `backend/src/order/order.service.ts`
+- `components/RestaurantOrdersView.tsx`
+- `app/restaurant/dashboard/dashboard.module.css`
+- `lib/api.ts`
+- `app/admin/dashboard/page.tsx`
+- `app/admin/dashboard/admin.module.css`
+- `PROMPT_LOG.md`
+- `PROJECT_STRUCTURE.md`
+
+**Validation / command results:**
+- `npx prisma migrate dev --name add_pos_order_number`:
+  - blocked by Prisma in this environment (`non-interactive` shell restriction for `migrate dev`).
+- Equivalent migration creation and apply completed via:
+  - manual migration SQL file generation
+  - `npx prisma migrate deploy` (passed, migration applied)
+- `npx prisma generate` passed.
+- `npx prisma validate` passed.
+- `npm run build` (backend) passed.
+- `npx tsc --noEmit` passed.
+- `npm run build` (frontend) passed.
+
+## Prompt 22 - Order State Machine & Controlled Cancellation Refactor
+
+**Business reasoning:**
+- Split physical handover from student confirmation to model real COUNTER pickup behavior.
+- Prevent invalid restaurant cancellation after handover and after completion.
+- Ensure cancelled CARD orders clearly communicate manual refund pickup to students.
+- Keep service-fee behavior controlled by the Super Admin toggle, while changing COUNTER fee recognition to final completion.
+
+**Schema changes:**
+- Updated `OrderStatus` to:
+  - `RECEIVED`
+  - `PREPARING`
+  - `READY`
+  - `DELIVERED_TO_STUDENT`
+  - `COMPLETED`
+  - `CANCELLED`
+- Added `SYSTEM_TIMEOUT` to `CancellationReasonType`.
+- Added nullable `Order` timestamps:
+  - `readyAt`
+  - `deliveredAt`
+  - `completedAt`
+
+**Cancellation boundary enforcement:**
+- Restaurant cancellation allowed in:
+  - `RECEIVED`
+  - `PREPARING`
+- In `READY`, only `INTERNAL_ISSUE` is accepted.
+- Restaurant cancellation blocked in:
+  - `DELIVERED_TO_STUDENT`
+  - `COMPLETED`
+- `SYSTEM_TIMEOUT` reason is reserved for internal automatic cancellation and rejected from restaurant cancel requests.
+- Added internal timeout sweep for `COUNTER + READY + readyAt older than 3 hours`:
+  - status -> `CANCELLED`
+  - `cancellationReasonType` -> `SYSTEM_TIMEOUT`
+  - `refundStatus` -> `NOT_REQUIRED`
+  - `cancelledByRole` kept `null` (no new role introduced)
+
+**Order lifecycle/refund logic updates:**
+- `PREPARING -> READY` sets `readyAt`.
+- `READY -> DELIVERED_TO_STUDENT` (restaurant handover) sets `deliveredAt`.
+- `DELIVERED_TO_STUDENT -> COMPLETED` (student confirmation) sets `completedAt`.
+- Student confirmation is owner-only and only valid from `DELIVERED_TO_STUDENT`.
+- New order blocking for students now applies only when an existing `COUNTER` order is in `DELIVERED_TO_STUDENT`:
+  - error: `Previous order must be confirmed before placing a new one.`
+- Cancelled `CARD` orders continue to set `refundStatus = PENDING_MANUAL_REFUND`.
+- Service-fee analytics now count `COUNTER` fees only when order status is `COMPLETED` (service-fee toggle behavior preserved).
+
+**Frontend adjustments (minimal):**
+- Replaced `DELIVERED` usage with `DELIVERED_TO_STUDENT` and added `COMPLETED` handling.
+- Restaurant orders view now supports:
+  - handover action from `READY` to `DELIVERED_TO_STUDENT`
+  - READY-state cancel modal constrained to `INTERNAL_ISSUE`
+- Student order page now:
+  - shows `Mark as Completed` only in `DELIVERED_TO_STUDENT`
+  - sends status update to `COMPLETED`
+  - shows refund instruction text only for cancelled `CARD` orders, including amount paid and cancellation reason context.
+
+**Files touched:**
+- `backend/prisma/schema.prisma`
+- `backend/prisma/migrations/20260218120000_order_state_machine_controlled_cancellation/migration.sql`
+- `backend/src/order/order.service.ts`
+- `components/RestaurantOrdersView.tsx`
+- `app/student/order/[id]/page.tsx`
+- `app/restaurant/dashboard/dashboard.module.css`
+- `lib/api.ts`
+- `app/admin/dashboard/page.tsx`
+- `PROMPT_LOG.md`
+
+**Migration notes:**
+- Added new migration only (no edits to previous migrations).
+- Migration performs:
+  - `OrderStatus` enum rename `DELIVERED -> DELIVERED_TO_STUDENT`
+  - `OrderStatus` enum add `COMPLETED`
+  - `CancellationReasonType` enum add `SYSTEM_TIMEOUT`
+  - `orders` table add nullable `readyAt`, `deliveredAt`, `completedAt`.
+
+**Validation / build results:**
+- `npx prisma validate` passed.
+- `npx prisma generate` passed.
+- `npm run build` (backend) passed.
+- `npx tsc --noEmit` passed.
+- `npm run build` (frontend) passed.
+
+## Prompt 23 - Restaurant Operational Sync & Dashboard Refactor
+
+**Audit findings:**
+- `backend/src/restaurant/restaurant.service.ts` was recomputing `isOpen` during public fetch and could override persisted manual state in the response path.
+- Auto-close was tied to student list fetch timing, which created stale/lagging behavior between restaurant and student views.
+- Student home (`app/student/home/page.tsx`) loaded restaurants only once on mount, so browser tab switches/focus could keep stale availability state.
+- Restaurant orders UI (`components/RestaurantOrdersView.tsx`) mixed incoming/history logic, included `READY` inside incoming queue, and had no backend search filter.
+
+**Fixes applied:**
+- **Restaurant availability sync**
+  - Kept `isOpen` as persisted DB source of truth.
+  - Removed response-time `isOpen` recomputation in public list path.
+  - Added explicit auto-close check based on `openTime/closeTime` window logic (including overnight windows).
+  - Added university-active and maintenance guard effects in availability flow.
+  - Added enforcement on open actions (`openRestaurant` and `updateSettings` with `isOpen=true`) for:
+    - `isDisabled`
+    - inactive university
+    - maintenance mode
+    - required opening/closing times
+  - `getSettings` now applies auto-close check before returning values.
+
+- **Student sync refresh**
+  - `app/student/home/page.tsx` now reloads restaurants on:
+    - interval (15s)
+    - window focus
+    - visibility change to visible
+  - This keeps student availability aligned with backend changes without tab-refresh gaps.
+
+- **Restaurant dashboard order workflow refactor**
+  - Reworked `components/RestaurantOrdersView.tsx` into two sub-tabs:
+    - `Incoming Orders`: `RECEIVED`, `PREPARING`
+    - `Today's Orders` (last 24h): `READY`, `DELIVERED_TO_STUDENT`, `COMPLETED`, `CANCELLED`
+  - Counters:
+    - Incoming count = `RECEIVED + PREPARING`
+    - Today count = `READY + DELIVERED_TO_STUDENT + COMPLETED` (within 24h)
+  - Added debounced search inputs (350ms) for both tabs.
+  - Added server-side filtering support through order query params (no full-dataset client filtering).
+  - Kept UUID internal; UI continues using `orderNumber` and optional `posOrderNumber`.
+  - Restricted order action controls to restaurant owner context (super admin remains read-only in this view).
+
+- **Backend order query filtering**
+  - Extended `GET /order/restaurant/:restaurantId` with:
+    - `statuses` (comma-separated)
+    - `search`
+    - `sinceHours`
+  - Search matches:
+    - numeric `orderNumber`
+    - `posOrderNumber` partial (case-insensitive)
+  - Updated pending-count logic to include both `RECEIVED` and `PREPARING`.
+
+- **Reminder behavior**
+  - `app/restaurant/dashboard/page.tsx` reminder window now uses open/close-time-aware logic to avoid incorrect reminders outside active window, including overnight schedules.
+
+**Files touched:**
+- `backend/src/restaurant/restaurant.module.ts`
+- `backend/src/restaurant/restaurant.service.ts`
+- `backend/src/restaurant/restaurant.service.spec.ts`
+- `backend/src/order/order.controller.ts`
+- `backend/src/order/order.service.ts`
+- `app/student/home/page.tsx`
+- `components/RestaurantOrdersView.tsx`
+- `app/restaurant/dashboard/dashboard.module.css`
+- `app/restaurant/dashboard/page.tsx`
+- `PROMPT_LOG.md`
+
+**Time logic notes:**
+- Auto-close now evaluates against operational window semantics rather than only a simple `now >= closeTime` same-day check.
+- Overnight schedule behavior is handled for windows like `20:00 -> 02:00`.
+- Reminder logic is notification-only and does not auto-open restaurants.
+
+**Validation / build results:**
+- `npm run build` (backend): passed
+- `npx tsc --noEmit`: passed
+- `npm run build` (frontend): passed
+
+## Prompt 24 - UX Completion & Global Navigation Polish
+
+**Scope guardrails respected:**
+- No Prisma schema changes.
+- No order state machine changes.
+- No cancellation/revenue/refund logic changes.
+- UX and navigation layer only, plus minimal report listing endpoint for student tracking.
+
+**Audit summary before implementation:**
+- Root `loading.tsx` was missing, so route transitions had no branded global loading experience.
+- Restaurant dashboard reminder existed as one-time `SweetAlert`, not persistent/sticky.
+- Student layout had no global pending-confirmation UX reminder and no quick active-order shortcut.
+- Student did not have a consolidated `My Orders`/`Reports` page.
+- Existing order endpoint `GET /order/student` already covered student order history needs.
+- Existing report APIs lacked a student-owned listing endpoint; added minimal `GET /report/student`.
+
+**Implemented UX changes:**
+
+- **Global route loading overlay**
+  - Added `app/loading.tsx` + `app/loading.module.css`.
+  - Full-screen branded loader with centered spinner and fade-in animation (~360ms).
+  - No artificial delay introduced.
+
+- **Admin persistent opening-time reminder**
+  - Replaced modal reminder with persistent sticky banner in `app/restaurant/dashboard/page.tsx`.
+  - Banner condition now checks:
+    - opening time passed
+    - `isOpen = false`
+    - restaurant not disabled
+    - university active
+    - maintenance mode disabled
+  - Banner remains visible across all dashboard tabs until restaurant is opened.
+  - Added supporting style in `app/restaurant/dashboard/dashboard.module.css`.
+
+- **Student persistent confirmation reminder**
+  - Updated `app/student/layout.tsx` to poll student orders and derive:
+    - pending confirmation (`COUNTER + DELIVERED_TO_STUDENT`)
+    - latest active order shortcut
+  - Added sticky banner across student pages:
+    - “You have an order pending confirmation…”
+  - Banner disappears automatically when order becomes `COMPLETED` or `CANCELLED`.
+
+- **Active order quick access**
+  - Added shared student quick actions bar (in `app/student/layout.tsx`):
+    - `My Orders`
+    - `My Active Order` (shown only when active order exists)
+  - Reuses existing `/student/order/[id]` tracking page.
+
+- **Student My Orders page**
+  - Added `app/student/orders/page.tsx` + `app/student/orders/orders.module.css`.
+  - Tabs:
+    - `Active Orders`: `RECEIVED`, `PREPARING`, `READY`, `DELIVERED_TO_STUDENT`
+    - `Past Orders`: `COMPLETED`, `CANCELLED`
+    - `Reports`
+  - Orders default-filtered to last 30 days.
+  - Displays: `orderNumber`, restaurant name, status, total, payment method, createdAt, details button.
+  - Reused existing `GET /order/student`.
+
+- **Student report tracking**
+  - Added minimal backend endpoint:
+    - `GET /report/student`
+  - Added service query with student ownership scope + restaurant relation fields.
+  - Reports tab displays:
+    - report type
+    - related restaurant
+    - status (`PENDING`, `RESOLVED_BY_RESTAURANT`, `CONFIRMED_BY_STUDENT`, `ESCALATED`)
+    - createdAt / updatedAt
+
+**Backend support change (minimal):**
+- Extended restaurant settings payload (no schema change) in `backend/src/restaurant/restaurant.service.ts`:
+  - `isDisabled`
+  - `isUniversityActive`
+  - used by persistent admin banner logic.
+
+**Files touched:**
+- `app/loading.tsx`
+- `app/loading.module.css`
+- `app/restaurant/dashboard/page.tsx`
+- `app/restaurant/dashboard/dashboard.module.css`
+- `app/student/layout.tsx`
+- `app/student/layout.module.css`
+- `app/student/orders/page.tsx`
+- `app/student/orders/orders.module.css`
+- `backend/src/report/report.controller.ts`
+- `backend/src/report/report.service.ts`
+- `backend/src/restaurant/restaurant.service.ts`
+- `PROMPT_LOG.md`
+
+**Validation / build results:**
+- `npm run build` (frontend): passed
+- `npx tsc --noEmit`: passed
+- `npm run build` (backend): passed
+
+## Prompt 25 - Role-Based Sidebar & Account System
+
+**Audit findings (before implementation):**
+- `backend/prisma/schema.prisma` `User` model did not contain `name`, `phone`, or `language`.
+- No existing profile endpoint or change-password endpoint existed (`users` controller was missing).
+- Auth flow existed and was retained (`/auth/signup`, `/auth/login`, `/auth/me`, cookie-based JWT).
+- Existing role UI structure:
+  - Student had `app/student/layout.tsx`.
+  - Restaurant and super admin had dashboard pages but no dedicated role layouts.
+- Existing order state machine and financial logic were not modified.
+
+**Schema changes:**
+- Added to `User` model:
+  - `name String?`
+  - `phone String?`
+  - `language String @default("en")`
+- Added migration:
+  - `backend/prisma/migrations/20260219190000_add_user_profile_fields/migration.sql`
+
+**Backend profile/account system changes:**
+- Added role-aware profile endpoints:
+  - `GET /users/me/profile`
+  - `PUT /users/me/profile`
+  - `PATCH /users/me/language`
+- Added secure password-change endpoint:
+  - `POST /auth/change-password`
+  - validates current password and hashes new password via existing auth service.
+- Extended user/auth payloads to include profile language fields and support personalization.
+- Added role-aware profile analytics:
+  - Student: most ordered restaurant.
+  - Restaurant admin: most sold item, orders today, total orders.
+
+**Frontend structure and navigation changes:**
+- Added reusable role shell + sidebar components with:
+  - Desktop always-visible left sidebar.
+  - Mobile collapsible drawer with overlay animation.
+  - Role-based links for student, restaurant admin, and super admin.
+- Added role layouts:
+  - `app/admin/layout.tsx`
+  - `app/restaurant/layout.tsx`
+  - student layout upgraded to render in the same shell.
+- Added pages:
+  - `/profile`
+  - `/settings`
+  - `/settings/change-password`
+  - `/about`
+- Added greeting personalization (example format: `Hello, Ahmed 👋`).
+- Added disabled Google button (UI only) on login/signup with tooltip `Coming Soon`.
+
+**i18n and localization scaffolding:**
+- Added locale files:
+  - `locales/en.json`
+  - `locales/ar.json`
+- Added i18n helpers:
+  - `lib/i18n.ts`
+  - `lib/language.ts`
+- Added language toggle in settings page.
+- Language is persisted in DB (`user.language`) and applied to document `lang`/`dir` for RTL/LTR.
+
+**Files touched (this prompt):**
+- `backend/prisma/schema.prisma`
+- `backend/prisma/migrations/20260219190000_add_user_profile_fields/migration.sql`
+- `backend/src/auth/auth.controller.ts`
+- `backend/src/auth/auth.service.ts`
+- `backend/src/auth/dto/signup.dto.ts`
+- `backend/src/auth/dto/change-password.dto.ts`
+- `backend/src/users/users.module.ts`
+- `backend/src/users/users.controller.ts`
+- `backend/src/users/users.service.ts`
+- `backend/src/users/dto/create-user.dto.ts`
+- `backend/src/users/dto/update-profile.dto.ts`
+- `backend/src/users/dto/update-language.dto.ts`
+- `backend/src/restaurant/restaurant.service.ts`
+- `lib/api.ts`
+- `lib/auth.ts`
+- `lib/i18n.ts`
+- `lib/language.ts`
+- `locales/en.json`
+- `locales/ar.json`
+- `components/RoleShell.tsx`
+- `components/RoleSidebar.tsx`
+- `components/ProtectedRolePage.tsx`
+- `components/role-shell.module.css`
+- `components/role-sidebar.module.css`
+- `app/student/layout.tsx`
+- `app/student/home/page.tsx`
+- `app/student/home/home.module.css`
+- `app/student/orders/page.tsx`
+- `app/admin/layout.tsx`
+- `app/admin/dashboard/page.tsx`
+- `app/restaurant/layout.tsx`
+- `app/restaurant/dashboard/page.tsx`
+- `app/profile/page.tsx`
+- `app/profile/profile.module.css`
+- `app/settings/page.tsx`
+- `app/settings/settings.module.css`
+- `app/settings/change-password/page.tsx`
+- `app/settings/change-password/change-password.module.css`
+- `app/about/page.tsx`
+- `app/about/about.module.css`
+- `app/auth/login/page.tsx`
+- `app/auth/signup/page.tsx`
+- `app/auth/login/auth.module.css`
+- `components/RestaurantOrdersView.tsx`
+- `PROMPT_LOG.md`
+
+**Validation / build results:**
+- `npm run build` (frontend): passed
+- `npm run build` (backend): passed
+- `npx prisma validate` (backend): passed
+- `npx tsc --noEmit`: passed
+
+## Prompt 26 - Layout Refinement & Stable i18n
+
+**Audit findings:**
+- `components/RoleShell.tsx` always rendered `RoleSidebar` for all roles.
+- `app/admin/dashboard/page.tsx` also rendered its own internal sidebar panel, causing duplicate sidebars for super admin.
+- Sidebar visual style was dark (`components/role-sidebar.module.css`) and not collapsible on desktop.
+- i18n state was fragmented (event-based, per-page usage), with no shared language provider for student/restaurant shells.
+- `fetchMyProfile` was exported from `lib/api.ts`, but profile/settings relied on the large shared API module; imports were hardened by moving profile functions to a focused module.
+
+**What was implemented:**
+- **Collapsible icon-first sidebar (student + restaurant + protected pages):**
+  - Reworked `components/RoleSidebar.tsx` and `components/role-sidebar.module.css` into:
+    - default collapsed width (~72px),
+    - expandable width (~240px),
+    - icon-always-visible nav,
+    - text shown on expand,
+    - smooth width/label transitions,
+    - light theme (white surface, subtle border/shadow),
+    - top toggle button with badge.
+- **Badge logic on sidebar toggle:**
+  - Student badge: counts `DELIVERED_TO_STUDENT` orders from `/order/student`.
+  - Restaurant badge: uses pending count endpoint (received + preparing) via `fetchPendingOrdersCount`.
+  - Poll/focus/visibility refresh added for live updates.
+- **Super admin duplicate sidebar cleanup:**
+  - `app/admin/layout.tsx` no longer wraps with `RoleShell`.
+  - Dashboard now uses only its own internal white structured sidebar panel (no black outer duplication).
+  - Super admin language is forced to English in this layout (`applyLanguageToDocument('en')`).
+- **Global i18n stabilization:**
+  - Added `components/LanguageProvider.tsx` with shared context (`locale`, `messages`, `setLanguage`) and document-level `lang/dir` sync.
+  - Wrapped student and restaurant layouts with `LanguageProvider`.
+  - Updated `components/ProtectedRolePage.tsx` to use `LanguageProvider` as shell-level source for settings/profile/about flows.
+  - Updated student/restaurant shell-related views to consume shared messages.
+- **RTL behavior:**
+  - `lang/dir` now updated globally by provider.
+  - Sidebar styles switched to logical properties (`border-inline-end`, inline badges/text alignment), so layout flips correctly in RTL.
+  - Shell inherits direction (`components/role-shell.module.css`).
+- **Profile import/export stabilization (`fetchMyProfile is not a function`):**
+  - Added focused module `lib/profile-api.ts` with named exports:
+    - `fetchMyProfile`
+    - `updateMyProfile`
+    - `updateMyLanguage`
+  - Updated profile/settings pages to import from this module, reducing risk of runtime mismatch from large-module loading.
+- **String internationalization pass (student + restaurant requested surfaces):**
+  - Student:
+    - `app/student/layout.tsx` (banners/quick actions)
+    - `app/student/home/page.tsx`
+    - `app/student/orders/page.tsx`
+    - `app/student/order/[id]/page.tsx`
+    - `app/profile/page.tsx`
+    - `app/settings/page.tsx`
+    - `app/settings/change-password/page.tsx`
+  - Restaurant:
+    - `app/restaurant/dashboard/page.tsx` (tabs/reports/settings/banner)
+    - `components/RestaurantOrdersView.tsx` (orders/reminder/actions/search/alerts)
+  - Expanded locale dictionaries:
+    - `locales/en.json`
+    - `locales/ar.json`
+
+**Files touched:**
+- `components/LanguageProvider.tsx`
+- `components/RoleSidebar.tsx`
+- `components/role-sidebar.module.css`
+- `components/role-shell.module.css`
+- `components/ProtectedRolePage.tsx`
+- `app/student/layout.tsx`
+- `app/restaurant/layout.tsx`
+- `app/admin/layout.tsx`
+- `app/settings/page.tsx`
+- `app/profile/page.tsx`
+- `app/settings/change-password/page.tsx`
+- `app/student/home/page.tsx`
+- `app/student/orders/page.tsx`
+- `app/student/order/[id]/page.tsx`
+- `app/restaurant/dashboard/page.tsx`
+- `components/RestaurantOrdersView.tsx`
+- `lib/profile-api.ts`
+- `locales/en.json`
+- `locales/ar.json`
+- `PROMPT_LOG.md`
+
+**Validation / build results:**
+- `npm run build` (frontend): passed
+- `npm run build` (backend): passed
+- `npx tsc --noEmit`: passed
+
+## Prompt 27 - Governance Engine Completion & Full Localization
+
+**Audit findings (before coding):**
+- Report lifecycle primitives already existed (`PENDING`, `RESOLVED_BY_RESTAURANT`, `CONFIRMED_BY_STUDENT`, `ESCALATED`) with resolve/confirm handlers, but student confirm UI was missing.
+- Escalation logic was lazy-triggered on read paths and incorrectly escalated stale `PENDING` reports, not only stale `RESOLVED_BY_RESTAURANT` reports.
+- No dedicated scheduler existed in report module; only order module had a safe interval pattern.
+- Three-strike auto-disable existed, but needed safer status updates, super-admin visibility, and super-admin-only re-enable flow.
+- Super admin reports section was placeholder text only.
+- i18n was partially wired, but major student/restaurant screens still had hardcoded strings; Arabic dictionary values were effectively English.
+- Route loading existed but lacked top progress indication and icon-only compact loader treatment.
+
+**Governance implementation details:**
+- Report controller now supports both singular/plural route prefixes via `@Controller(['report', 'reports'])`.
+- Added plural endpoint compatibility:
+  - `PATCH /reports/:id/confirm` (kept existing `PUT` compatibility)
+  - `GET /reports/escalated` (kept existing `GET /report/admin` compatibility)
+- Report escalation converted to scheduler-based sweep in `ReportService`:
+  - `OnModuleInit` + `setInterval` (60s) + `OnModuleDestroy` cleanup
+  - Escalates only `RESOLVED_BY_RESTAURANT` reports older than 24h to `ESCALATED`
+  - Removed lazy read-time escalation dependency
+- Unhandled report count now reflects actionable queue (`PENDING`, `ESCALATED`) instead of counting finalized states.
+
+**Auto-disable algorithm (3-student rule):**
+- Rule remains centralized in existing report creation flow (`checkThreeStrikeRule`) to avoid duplicate disable paths.
+- Trigger condition: same restaurant + same report type + last 2 hours + at least 3 unique student IDs.
+- On trigger:
+  - Disables restaurant (`isDisabled=true`, `isOpen=false`, `disabledAt=now`) only if not already disabled.
+  - Escalates matching recent reports only from actionable states (`PENDING`, `RESOLVED_BY_RESTAURANT`) to avoid overriding student-confirmed outcomes.
+  - Writes system log via backend `Logger.warn`.
+- Added super-admin governance APIs in restaurant module:
+  - `GET /restaurant/auto-disabled` (derived auto-disable evidence + reason message)
+  - `PATCH /restaurant/:id/re-enable` (SUPER_ADMIN only)
+
+**Super-admin governance dashboard updates:**
+- Implemented real “Escalated Reports” section (newest-first feed, explicit escalated badge).
+- Implemented “Auto Disabled Restaurants” section with reason, trigger type, unique-student count, disabled timestamp.
+- Added `Re-enable Restaurant` action button (SUPER_ADMIN only path).
+- Added polling refresh while reports section is active.
+
+**Student + restaurant report workflow UX updates:**
+- Student reports tab now shows `Confirm Resolved` button when report status is `RESOLVED_BY_RESTAURANT`.
+- Confirm action uses new plural API helper and updates status to `CONFIRMED_BY_STUDENT`.
+- Restaurant dashboard now polls report feed and surfaces escalated-report alert banner for notification visibility.
+
+**Global i18n binding + Arabic content updates:**
+- Replaced hardcoded strings in major student/restaurant surfaces:
+  - `app/student/cart/page.tsx`
+  - `app/student/restaurant/[id]/page.tsx`
+  - report actions in `app/student/orders/page.tsx`
+  - menu/report strings in `app/restaurant/dashboard/page.tsx`
+- Added comprehensive new keys to `locales/en.json`.
+- Replaced `locales/ar.json` with translated Arabic values across sidebar/common/student/restaurant/status/payment/refund and newly introduced governance/cart/menu keys.
+- Kept document-level RTL/LTR propagation via existing `LanguageProvider`, and fixed logical-direction CSS hotspots (inline-end positioning, start alignment, toggle direction in RTL).
+
+**Loading UX updates:**
+- Upgraded global `app/loading.tsx` + `app/loading.module.css` to hybrid loading:
+  - subtle global blur overlay
+  - top animated progress bar
+  - compact icon-only UniBite mark + spinner
+  - fade-in and motion-reduced fallback
+- No artificial delay; suspense-driven only.
+
+**Files touched:**
+- `backend/src/report/report.service.ts`
+- `backend/src/report/report.controller.ts`
+- `backend/src/restaurant/restaurant.service.ts`
+- `backend/src/restaurant/restaurant.controller.ts`
+- `lib/api.ts`
+- `app/admin/dashboard/page.tsx`
+- `app/restaurant/dashboard/page.tsx`
+- `app/restaurant/dashboard/dashboard.module.css`
+- `components/RestaurantOrdersView.tsx`
+- `app/student/orders/page.tsx`
+- `app/student/orders/orders.module.css`
+- `app/student/cart/page.tsx`
+- `app/student/restaurant/[id]/page.tsx`
+- `app/student/restaurant/[id]/menu.module.css`
+- `app/student/home/home.module.css`
+- `app/student/layout.tsx`
+- `app/restaurant/layout.tsx`
+- `app/loading.tsx`
+- `app/loading.module.css`
+- `locales/en.json`
+- `locales/ar.json`
+- `PROMPT_LOG.md`
+
+**Validation / build results:**
+- `npm run build` (frontend): passed
+- `npm run build` (backend): passed
+- `npx prisma validate`: passed
+- `npx tsc --noEmit`: passed
+
+## Prompt 27 – Minimal Branding Finalization
+
+**What was requested:**
+- Integrate final branding assets with minimal frontend-only changes.
+- Configure browser tab metadata/icons without duplicate favicon wiring.
+- Add clean logo placement in login/signup, sidebar, loading screen, and product placeholders.
+- Update `PROMPT_LOG.md` and `PROJECT_STRUCTURE.md`.
+
+**Audit findings (before edits):**
+- `public/` only had legacy `icon-192.png`, `icon-512.png`, and `manifest.json`.
+- `app/layout.tsx` metadata used old title/description and had manual `<head>` manifest/theme entries.
+- Login/signup did not render brand logo.
+- Sidebar brand used a text/letter mark, not logo assets.
+- Loading screen used a letter mark, not the icon asset.
+- Product placeholders used plain `IMG` text.
+- No duplicate favicon `<link rel="icon">` tags were found in app/components.
+
+**Assets integrated in `public/` (root only):**
+- `public/favicon-16x16.png`
+- `public/favicon-32x32.png`
+- `public/apple-touch-icon.png`
+- `public/logo-full.svg`
+- `public/logo-icon.svg`
+
+**Legacy root assets removed to avoid duplicates:**
+- `public/icon-192.png`
+- `public/icon-512.png`
+- `public/manifest.json`
+
+**Favicon + metadata configuration:**
+- Updated `app/layout.tsx` metadata to:
+  - `title: "UniBite"`
+  - `description: "Taste the Campus Vibe"`
+  - `icons.icon` (`/favicon-16x16.png`, `/favicon-32x32.png`)
+  - `icons.apple` (`/apple-touch-icon.png`)
+- Removed manual `<head>` manifest/meta entries so icon config is single-source from metadata.
+
+**Logo placements added:**
+- Login page (`app/auth/login/page.tsx`): centered `logo-full.svg` above form title.
+- Signup page (`app/auth/signup/page.tsx`): centered `logo-full.svg` above form title.
+- Sidebar (`components/RoleSidebar.tsx`, `components/role-sidebar.module.css`):
+  - expanded: `logo-full.svg`
+  - collapsed: `logo-icon.svg`
+- Loading overlay (`app/loading.tsx`, `app/loading.module.css`):
+  - centered `logo-icon.svg`
+  - subtle opacity pulse (`1s ease-in-out infinite`)
+  - no slogan and no large-scale animation.
+- Product image placeholders:
+  - `app/student/restaurant/[id]/page.tsx` + `app/student/restaurant/[id]/menu.module.css`
+  - `app/restaurant/dashboard/page.tsx` + `app/restaurant/dashboard/dashboard.module.css`
+  - centered `logo-icon.svg` with low opacity (`0.3`), preserved aspect ratio.
+
+**Files modified:**
+- `app/layout.tsx`
+- `app/auth/login/page.tsx`
+- `app/auth/signup/page.tsx`
+- `app/auth/login/auth.module.css`
+- `components/RoleSidebar.tsx`
+- `components/role-sidebar.module.css`
+- `app/loading.tsx`
+- `app/loading.module.css`
+- `app/student/restaurant/[id]/page.tsx`
+- `app/student/restaurant/[id]/menu.module.css`
+- `app/restaurant/dashboard/page.tsx`
+- `app/restaurant/dashboard/dashboard.module.css`
+- `PROJECT_STRUCTURE.md`
+- `PROMPT_LOG.md`
+
+**Validation / build results:**
+- `npm run build` (frontend): passed
+- `npx tsc --noEmit`: passed
+
+## SVG Optimization Pass
+
+**Scope constraints followed:**
+- No backend changes.
+- No TS/JS logic changes.
+- SVG-only optimization applied to files in `public/`.
+
+**Tooling:**
+- Installed dev dependency: `svgo`.
+- Command used: `npx svgo public/logo-full.svg public/logo-icon.svg --multipass -o public`
+
+**Files optimized:**
+- `public/logo-full.svg`
+- `public/logo-icon.svg`
+
+**Optimization notes:**
+- Removed/minified redundant metadata/style/comment payload where safe.
+- Preserved `viewBox` in both files.
+- Kept width/height on embedded image nodes.
+- No visual-targeted structure changes introduced.
+
+**Size reduction:**
+- `public/logo-full.svg`: `5,380,969` -> `5,380,913` bytes (`-56 bytes`)
+- `public/logo-icon.svg`: `541,331` -> `540,398` bytes (`-933 bytes`)
+
+**Validation commands requested for this pass:**
+- `npm run build`
+- `npx tsc --noEmit`

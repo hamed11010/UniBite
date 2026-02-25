@@ -36,6 +36,51 @@
   padding: 24px 20px;
 }
 
+.dashboardContainer {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sidebarItem {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  background: transparent;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sidebarItem:hover {
+  background: #eef2ff;
+  color: #1f2937;
+}
+
+.sidebarItemActive {
+  background: #667eea;
+  color: white;
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0;
+}
+
 .overviewSection {
   background: white;
   border-radius: 12px;
@@ -423,6 +468,21 @@
   outline: none;
 }
 
+.ordersFilterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.ordersPaginationRow {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
 .selectedRestaurantNote {
   margin-top: 12px;
   padding: 12px;
@@ -568,4 +628,184 @@
 
 .submitButton:hover {
   background: #5568d3;
+}
+/* Order History Styles */
+.ordersList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.orderCard {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e0e0e0;
+}
+
+.orderHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.orderId {
+  font-weight: 700;
+  font-size: 16px;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.orderTime {
+  font-size: 12px;
+  color: #999;
+}
+
+.orderItems {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #555;
+}
+
+.itemName {
+  font-weight: 500;
+}
+
+.orderTotal {
+  font-weight: 700;
+  font-size: 16px;
+  color: #333;
+  text-align: right;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Status Colors */
+.received {
+  background: #2196F3;
+  color: white;
+}
+
+.preparing {
+  background: #FF9800;
+  color: white;
+}
+
+.ready {
+  background: #4CAF50;
+  color: white;
+}
+
+.completed {
+  background: #9E9E9E;
+  color: white;
+}
+
+.cancelled {
+  background: #F44336;
+  color: white;
+}
+
+.delivered {
+  background: #4CAF50;
+  color: white;
+}
+
+.orderAnalyticsOverview {
+  background: #f8faff;
+  border: 1px solid #dfe7ff;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.orderAnalyticsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.analyticsMetricCard {
+  border: 1px solid #e4e6f5;
+  border-radius: 10px;
+  padding: 12px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metricLabel {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #6b7280;
+  letter-spacing: 0.4px;
+}
+
+.metricValue {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.restaurantOrderHistory {
+  margin-top: 16px;
+}
+
+.orderHistoryHeading {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.orderHistoryMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.serviceFeeInfoBanner {
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.serviceFeeCards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.serviceFeeCard {
+  border: 1px solid #dbe4ff;
+  border-radius: 12px;
+  background: #f8faff;
+  padding: 16px;
+}
+
+.serviceFeeMetricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
 }

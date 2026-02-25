@@ -47,7 +47,19 @@ export async function signup(
   email: string,
   password: string,
   universityId: string,
-): Promise<{ id: string; email: string; role: string; universityId: string; isVerified: boolean }> {
+  name?: string,
+  phone?: string,
+  language?: 'en' | 'ar',
+): Promise<{
+  id: string;
+  email: string;
+  role: string;
+  name?: string | null;
+  phone?: string | null;
+  language?: 'en' | 'ar';
+  universityId: string;
+  isVerified: boolean;
+}> {
   const response = await fetch(`${API_BASE_URL}/auth/signup`, {
     method: 'POST',
     headers: {
@@ -57,6 +69,9 @@ export async function signup(
       email,
       password,
       universityId,
+      ...(name ? { name } : {}),
+      ...(phone ? { phone } : {}),
+      ...(language ? { language } : {}),
     }),
   });
 
@@ -72,7 +87,18 @@ export async function login(
   email: string,
   password: string,
   universityId?: string,
-): Promise<{ user: { id: string; email: string; role: string; universityId?: string } }> {
+): Promise<{
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    name?: string | null;
+    phone?: string | null;
+    language?: 'en' | 'ar';
+    universityId?: string;
+    restaurantId?: string;
+  };
+}> {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
@@ -98,7 +124,11 @@ export async function getCurrentUser(): Promise<{
   id: string;
   email: string;
   role: string;
+  name?: string | null;
+  phone?: string | null;
+  language?: 'en' | 'ar';
   universityId?: string;
+  restaurantId?: string;
   isVerified: boolean;
 }> {
   const response = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -124,6 +154,209 @@ export async function logout(): Promise<void> {
     },
     credentials: 'include', // Important for cookies
   });
+}
+
+export type Role = 'STUDENT' | 'RESTAURANT_ADMIN' | 'SUPER_ADMIN';
+export type LanguageCode = 'en' | 'ar';
+
+export interface UserProfileResponse {
+  role: Role;
+  name?: string | null;
+  email: string;
+  phone?: string | null;
+  language: LanguageCode;
+  joinedDate: string;
+  university?: {
+    id: string;
+    name: string;
+  } | null;
+  mostOrderedRestaurant?: string | null;
+  restaurant?: {
+    id: string;
+    name: string;
+    responsibleName: string;
+    responsiblePhone: string;
+    university: {
+      id: string;
+      name: string;
+    };
+  };
+  analytics?: {
+    mostSoldItem: string | null;
+    ordersToday: number;
+    totalOrders: number;
+  };
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  phone?: string;
+  responsibleName?: string;
+  responsiblePhone?: string;
+}
+
+export async function fetchMyProfile(): Promise<UserProfileResponse> {
+  const response = await fetch(`${API_BASE_URL}/users/me/profile`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to load profile');
+  }
+
+  return response.json();
+}
+
+export async function verifyEmailCode(
+  email: string,
+  code: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      code,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Email verification failed');
+  }
+
+  return response.json();
+}
+
+export async function resendVerificationCode(
+  email: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to resend verification code');
+  }
+
+  return response.json();
+}
+
+export async function forgotPassword(
+  email: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to request password reset');
+  }
+
+  return response.json();
+}
+
+export async function resetPassword(
+  token: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      token,
+      newPassword,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to reset password');
+  }
+
+  return response.json();
+}
+
+export async function updateMyProfile(
+  data: UpdateProfilePayload,
+): Promise<UserProfileResponse> {
+  const response = await fetch(`${API_BASE_URL}/users/me/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update profile');
+  }
+
+  return response.json();
+}
+
+export async function updateMyLanguage(language: LanguageCode): Promise<{ language: LanguageCode }> {
+  const response = await fetch(`${API_BASE_URL}/users/me/language`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ language }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update language');
+  }
+
+  return response.json();
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to change password');
+  }
+
+  return response.json();
 }
 
 // Menu management (Restaurant Admin only)
@@ -494,6 +727,8 @@ export interface Restaurant {
   id: string;
   name: string;
   universityId: string;
+  isDisabled?: boolean;
+  disabledAt?: string | null;
   responsibleName: string;
   responsiblePhone: string;
   createdAt: string;
@@ -569,6 +804,351 @@ export async function fetchRestaurantsByUniversity(
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.message || 'Failed to fetch restaurants');
+  }
+
+  return response.json();
+}
+
+interface RestaurantOrderAnalyticsRow {
+  status:
+    | 'RECEIVED'
+    | 'PREPARING'
+    | 'READY'
+    | 'DELIVERED_TO_STUDENT'
+    | 'COMPLETED'
+    | 'CANCELLED';
+  total: number;
+}
+
+export interface RestaurantOrderAnalytics {
+  totalOrders: number;
+  totalRevenue: number;
+  cancelled: number;
+  completed: number;
+}
+
+export interface ServiceFeeAnalyticsRestaurant {
+  restaurantId: string;
+  restaurantName: string;
+  totalServiceFeeLifetime: number;
+  totalServiceFeeCurrentMonth: number;
+  totalCardFees: number;
+  contributingOrdersCount: number;
+}
+
+export interface ServiceFeeAnalyticsResponse {
+  serviceFeeEnabled: boolean;
+  restaurants: ServiceFeeAnalyticsRestaurant[];
+}
+
+export interface EscalatedReport {
+  id: string;
+  type: string;
+  status: 'ESCALATED';
+  comment?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  restaurant: {
+    id: string;
+    name: string;
+  };
+  student: {
+    id: string;
+    email: string;
+    name?: string | null;
+  };
+  order?: {
+    id: string;
+    orderNumber: number;
+  } | null;
+}
+
+export interface AutoDisabledRestaurant {
+  id: string;
+  name: string;
+  disabledAt: string;
+  reasonType: string;
+  uniqueStudents: number;
+  reasonMessage: string;
+  university: {
+    id: string;
+    name: string;
+  };
+}
+
+export async function fetchPendingOrdersCount(
+  restaurantId: string,
+): Promise<{ pendingOrders: number }> {
+  const response = await fetch(`${API_BASE_URL}/order/restaurant/${restaurantId}/pending-count`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch pending orders count');
+  }
+
+  return response.json();
+}
+
+export async function fetchUnhandledReportsCount(
+  restaurantId: string,
+): Promise<{ unhandledReports: number }> {
+  const response = await fetch(
+    `${API_BASE_URL}/reports/restaurant/${restaurantId}/unhandled-count`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch unhandled reports count');
+  }
+
+  return response.json();
+}
+
+export async function confirmStudentReportResolved(
+  reportId: string,
+): Promise<{ id: string; status: string; updatedAt: string }> {
+  const response = await fetch(`${API_BASE_URL}/reports/${reportId}/confirm`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to confirm report resolution');
+  }
+
+  return response.json();
+}
+
+export async function fetchEscalatedReportsForAdmin(): Promise<EscalatedReport[]> {
+  const response = await fetch(`${API_BASE_URL}/reports/escalated`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch escalated reports');
+  }
+
+  return response.json();
+}
+
+export async function fetchAutoDisabledRestaurants(): Promise<AutoDisabledRestaurant[]> {
+  const response = await fetch(`${API_BASE_URL}/restaurant/auto-disabled`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch auto-disabled restaurants');
+  }
+
+  return response.json();
+}
+
+export async function reEnableRestaurant(
+  restaurantId: string,
+): Promise<{ id: string; isDisabled: boolean }> {
+  const response = await fetch(`${API_BASE_URL}/restaurant/${restaurantId}/re-enable`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to re-enable restaurant');
+  }
+
+  return response.json();
+}
+
+export async function fetchRestaurantOrderAnalytics(
+  restaurantId: string,
+): Promise<RestaurantOrderAnalytics> {
+  const response = await fetch(`${API_BASE_URL}/order/restaurant/${restaurantId}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch order analytics');
+  }
+
+  const orders: RestaurantOrderAnalyticsRow[] = await response.json();
+
+  return {
+    totalOrders: orders.length,
+    totalRevenue: orders
+      .filter((order) => order.status === 'COMPLETED')
+      .reduce((sum, order) => sum + Number(order.total || 0), 0),
+    cancelled: orders.filter((order) => order.status === 'CANCELLED').length,
+    completed: orders.filter((order) => order.status === 'COMPLETED').length,
+  };
+}
+
+export async function fetchServiceFeeAnalytics(): Promise<ServiceFeeAnalyticsResponse> {
+  const response = await fetch(`${API_BASE_URL}/order/service-fee-analytics`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch service fee analytics');
+  }
+
+  return response.json();
+}
+
+// Global Config
+export interface GlobalConfig {
+  id: number;
+  serviceFeeEnabled: boolean;
+  serviceFeeAmount: number;
+  orderingEnabled: boolean;
+  maintenanceMode: boolean;
+  maintenanceMessage?: string;
+}
+
+export async function fetchGlobalConfig(): Promise<GlobalConfig> {
+  const response = await fetch(`${API_BASE_URL}/config`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch config');
+  }
+
+  return response.json();
+}
+
+export async function updateGlobalConfig(
+  data: Partial<GlobalConfig>,
+): Promise<GlobalConfig> {
+  const response = await fetch(`${API_BASE_URL}/config`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to update config');
+  }
+
+  return response.json();
+}
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  type:
+    | 'ORDER_READY'
+    | 'ORDER_CANCELLED'
+    | 'REPORT_RESOLVED'
+    | 'ESCALATION_CREATED'
+    | 'ESCALATION_RESOLVED';
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export async function fetchNotifications(): Promise<NotificationItem[]> {
+  const response = await fetch(`${API_BASE_URL}/notifications`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch notifications');
+  }
+
+  return response.json();
+}
+
+export async function markNotificationAsRead(
+  notificationId: string,
+): Promise<NotificationItem> {
+  const response = await fetch(
+    `${API_BASE_URL}/notifications/${notificationId}/read`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+    },
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to mark notification as read');
+  }
+
+  return response.json();
+}
+
+export async function fetchUnreadNotificationsCount(): Promise<{
+  unreadCount: number;
+}> {
+  const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch unread notifications');
   }
 
   return response.json();

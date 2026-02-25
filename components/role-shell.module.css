@@ -1,0 +1,12 @@
+.shell {
+  min-height: 100vh;
+  display: flex;
+  background: #f8fafc;
+  direction: inherit;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  padding: 0 0 24px;
+}

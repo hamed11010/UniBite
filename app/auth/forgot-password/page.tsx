@@ -1,21 +1,30 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import Link from 'next/link'
+import { forgotPassword } from '@/lib/api'
 import styles from '../login/auth.module.css'
 
 export default function ForgotPasswordPage() {
-  const router = useRouter()
   const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) return
-    
-    // Mock submission - UI only, no backend logic
-    setSubmitted(true)
+    setError('')
+    if (!email.trim()) return
+
+    setLoading(true)
+    try {
+      await forgotPassword(email.trim())
+      setSubmitted(true)
+    } catch (err: any) {
+      setError(err.message || 'Failed to request password reset')
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (submitted) {
@@ -24,7 +33,7 @@ export default function ForgotPasswordPage() {
         <div className={styles.content}>
           <h1 className={styles.title}>Check your email</h1>
           <p className={styles.subtitle}>
-            We've sent password reset instructions to {email}
+            We&apos;ve sent password reset instructions to {email}
           </p>
           <div className={styles.successMessage}>
             <p>If an account exists with this email, you will receive password reset instructions shortly.</p>
@@ -42,10 +51,11 @@ export default function ForgotPasswordPage() {
       <div className={styles.content}>
         <h1 className={styles.title}>Forgot Password?</h1>
         <p className={styles.subtitle}>
-          Enter your email address and we'll send you instructions to reset your password.
+          Enter your email address and we&apos;ll send you instructions to reset your password.
         </p>
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          {error && <div className={styles.error}>{error}</div>}
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
             <input
@@ -58,8 +68,8 @@ export default function ForgotPasswordPage() {
             />
           </div>
 
-          <button type="submit" className={styles.submitButton}>
-            Send Reset Instructions
+          <button type="submit" className={styles.submitButton} disabled={loading}>
+            {loading ? 'Sending...' : 'Send Reset Instructions'}
           </button>
         </form>
 

@@ -37,6 +37,21 @@
   padding: 0 20px;
 }
 
+.openReminderBanner {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 0 20px;
+  padding: 12px 14px;
+  border-radius: 0 0 10px 10px;
+  border: 1px solid #f59e0b;
+  border-top: none;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .tab {
   padding: 16px 24px;
   background: none;
@@ -49,6 +64,12 @@
   transition: color 0.2s;
 }
 
+.tabLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .tab:hover {
   color: #667eea;
 }
@@ -56,6 +77,25 @@
 .tab.active {
   color: #667eea;
   border-bottom-color: #667eea;
+}
+
+.badge {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e11d48;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  line-height: 1;
+}
+
+.badgeHidden {
+  display: none;
 }
 
 .content {
@@ -76,6 +116,103 @@
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.posReminderBanner {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  margin: -8px 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.ordersSubTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ordersSubTab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.ordersSubTab:hover {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
+.ordersSubTabActive {
+  background: #eef2ff;
+  border-color: #667eea;
+  color: #3730a3;
+}
+
+.orderCountBadge {
+  min-width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #1d4ed8;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+}
+
+.ordersToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.orderSearchInput {
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+}
+
+.orderStatusFilter {
+  min-width: 180px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+}
+
+.orderSearchInput:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
 }
 
 .emptyMessage {
@@ -119,6 +256,60 @@
   color: #666;
 }
 
+.posReferenceSection {
+  margin-top: 12px;
+}
+
+.posReferenceLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 6px;
+}
+
+.posReferenceRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.posReferenceInput {
+  width: 100%;
+  max-width: 300px;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #111827;
+  background: #fff;
+}
+
+.posReferenceInput:disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.posReferenceSaveButton {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.posReferenceSaveButton:hover {
+  background: #1d4ed8;
+}
+
+.posReferenceSaveButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .statusBadge {
   padding: 6px 12px;
   border-radius: 20px;
@@ -139,6 +330,16 @@
 
 .statusBadge.ready {
   background: #4CAF50;
+  color: white;
+}
+
+.statusBadge.delivered_to_student {
+  background: #607d8b;
+  color: white;
+}
+
+.statusBadge.completed {
+  background: #9e9e9e;
   color: white;
 }
 
@@ -202,6 +403,20 @@
   flex-wrap: wrap;
 }
 
+.reportActionButton {
+  margin-top: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #2563eb;
+  color: #fff;
+}
+
+.reportActionButton:hover {
+  background: #1d4ed8;
+}
+
 .actionButton {
   padding: 10px 20px;
   background: #667eea;
@@ -216,12 +431,49 @@
   background: #5568d3;
 }
 
+.detailsActionButton {
+  background: #2563eb;
+}
+
+.detailsActionButton:hover {
+  background: #1d4ed8;
+}
+
 .cancelButton {
   background: #f44336;
 }
 
 .cancelButton:hover {
   background: #d32f2f;
+}
+
+.paginationControls {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.paginationButton {
+  padding: 8px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.paginationButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.paginationInfo {
+  font-size: 13px;
+  color: #475569;
+  font-weight: 600;
 }
 
 .menuTab,
@@ -248,10 +500,9 @@
   margin-top: 16px;
   font-size: 14px;
   line-height: 1.8;
-  text-align: left;
+  text-align: start;
   max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
+  margin-inline: auto;
 }
 
 .settingGroup {
@@ -299,6 +550,105 @@
 
 .saveButton:hover {
   background: #5568d3;
+}
+
+.saveButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.settingsCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  background: #f9fafb;
+}
+
+.settingsCardTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 10px 0;
+}
+
+.availabilityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.manualAvailabilityBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.availabilityOpen {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.availabilityClosed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.manualAvailabilityToggle {
+  position: relative;
+  width: 56px;
+  height: 30px;
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+.manualAvailabilityToggleOpen {
+  background: #22c55e;
+}
+
+.manualAvailabilityToggleClosed {
+  background: #9ca3af;
+}
+
+.manualAvailabilityToggleKnob {
+  position: absolute;
+  top: 3px;
+  inset-inline-start: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+
+.manualAvailabilityToggleOpen .manualAvailabilityToggleKnob {
+  transform: translateX(26px);
+}
+
+:global([dir='rtl']) .manualAvailabilityToggleOpen .manualAvailabilityToggleKnob {
+  transform: translateX(-26px);
+}
+
+.settingsHint {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.settingsFieldLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 14px 0 8px;
 }
 
 /* Menu Management Styles */
@@ -452,7 +802,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+}
+
+.placeholderLogo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  opacity: 0.3;
 }
 
 .productDetails {

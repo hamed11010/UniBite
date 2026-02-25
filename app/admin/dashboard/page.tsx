@@ -1,27 +1,40 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 import { checkAuth, hasRole } from '@/lib/auth'
+import { APP_ROUTE } from '@/lib/redirectByRole'
 import {
   fetchAllUniversities,
   createUniversity,
   updateUniversity,
   toggleUniversityStatus,
   createRestaurant,
+  fetchAllRestaurants,
   fetchRestaurantsByUniversity,
-  fetchActiveUniversities,
   type University,
   type CreateUniversityDto,
   type UpdateUniversityDto,
   type CreateRestaurantDto,
   type Restaurant,
+  type GlobalConfig,
+  type ServiceFeeAnalyticsResponse,
+  fetchGlobalConfig,
+  updateGlobalConfig,
+  fetchServiceFeeAnalytics,
+  fetchEscalatedReportsForAdmin,
+  fetchAutoDisabledRestaurants,
+  reEnableRestaurant,
+  type EscalatedReport,
+  type AutoDisabledRestaurant,
 } from '@/lib/api'
 import { logout } from '@/lib/api'
 import styles from './admin.module.css'
+import AdminMonthlyOrdersPanel from '@/components/AdminMonthlyOrdersPanel'
 
 export default function PlatformAdminDashboard() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [universities, setUniversities] = useState<University[]>([])
   const [selectedUniversityId, setSelectedUniversityId] = useState<string>('all')
   const [loading, setLoading] = useState(true)
@@ -47,7 +60,22 @@ export default function PlatformAdminDashboard() {
     adminPassword: '',
   })
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
+  const [allRestaurants, setAllRestaurants] = useState<Restaurant[]>([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(false)
+  const [loadingAllRestaurants, setLoadingAllRestaurants] = useState(false)
+  const [globalConfig, setGlobalConfig] = useState<GlobalConfig | null>(null)
+  const [savingConfig, setSavingConfig] = useState(false)
+  const [serviceFeeAnalytics, setServiceFeeAnalytics] = useState<ServiceFeeAnalyticsResponse | null>(
+    null,
+  )
+  const [loadingServiceFeeAnalytics, setLoadingServiceFeeAnalytics] = useState(false)
+  const [activeSection, setActiveSection] = useState<
+    'overview' | 'universities' | 'restaurants' | 'orders' | 'serviceFee' | 'reports'
+  >('overview')
+  const [escalatedReports, setEscalatedReports] = useState<EscalatedReport[]>([])
+  const [autoDisabledRestaurants, setAutoDisabledRestaurants] = useState<AutoDisabledRestaurant[]>([])
+  const [loadingGovernance, setLoadingGovernance] = useState(false)
+  const [reEnablingRestaurantId, setReEnablingRestaurantId] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -63,26 +91,11 @@ export default function PlatformAdminDashboard() {
 
       // User is authenticated and has correct role - load dashboard data
       await loadUniversities()
+      await loadGlobalConfig()
     }
 
     verifyAuth()
   }, [router])
-
-  useEffect(() => {
-    // Load restaurants when university is selected
-    if (selectedUniversityId !== 'all' && selectedUniversityId) {
-      loadRestaurants(selectedUniversityId)
-      // Update restaurant form universityId if form is open
-      if (showRestaurantForm) {
-        setNewRestaurant((prev) => ({
-          ...prev,
-          universityId: selectedUniversityId,
-        }))
-      }
-    } else {
-      setRestaurants([])
-    }
-  }, [selectedUniversityId, showRestaurantForm])
 
   const loadUniversities = async () => {
     try {
@@ -93,6 +106,71 @@ export default function PlatformAdminDashboard() {
       setError(err.message || 'Failed to load universities')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadGlobalConfig = async () => {
+    try {
+      const config = await fetchGlobalConfig()
+      setGlobalConfig(config)
+    } catch (err) {
+      console.error('Failed to load global config', err)
+    }
+  }
+
+  const loadServiceFeeAnalytics = useCallback(async () => {
+    setLoadingServiceFeeAnalytics(true)
+    try {
+      const analytics = await fetchServiceFeeAnalytics()
+      setServiceFeeAnalytics(analytics)
+    } catch (error) {
+      console.error('Failed to load service fee analytics', error)
+      setServiceFeeAnalytics(null)
+    } finally {
+      setLoadingServiceFeeAnalytics(false)
+    }
+  }, [])
+
+  const loadGovernanceData = useCallback(async () => {
+    setLoadingGovernance(true)
+    try {
+      const [reports, autoDisabled] = await Promise.all([
+        fetchEscalatedReportsForAdmin(),
+        fetchAutoDisabledRestaurants(),
+      ])
+      setEscalatedReports(Array.isArray(reports) ? reports : [])
+      setAutoDisabledRestaurants(Array.isArray(autoDisabled) ? autoDisabled : [])
+    } catch (error) {
+      console.error('Failed to load governance data', error)
+      setEscalatedReports([])
+      setAutoDisabledRestaurants([])
+    } finally {
+      setLoadingGovernance(false)
+    }
+  }, [])
+
+  const handleUpdateConfig = async () => {
+    if (!globalConfig) return
+    setSavingConfig(true)
+    setError('')
+    setSuccess('')
+    try {
+      await updateGlobalConfig({
+        serviceFeeEnabled: globalConfig.serviceFeeEnabled,
+        serviceFeeAmount: Number(globalConfig.serviceFeeAmount),
+        orderingEnabled: globalConfig.orderingEnabled,
+        maintenanceMode: globalConfig.maintenanceMode,
+        maintenanceMessage: globalConfig.maintenanceMessage,
+      })
+      await loadGlobalConfig()
+      if (activeSection === 'serviceFee') {
+        await loadServiceFeeAnalytics()
+      }
+      setSuccess('Settings updated successfully')
+    } catch (err: any) {
+      setError(err.message || 'Failed to update settings')
+    } finally {
+      setSavingConfig(false)
     }
   }
 
@@ -138,17 +216,84 @@ export default function PlatformAdminDashboard() {
     }
   }
 
-  const loadRestaurants = async (universityId: string) => {
+  const loadRestaurants = useCallback(
+    async (universityId: string) => {
+      try {
+        setLoadingRestaurants(true)
+        const data = await fetchRestaurantsByUniversity(universityId)
+        setRestaurants(data)
+      } catch (err: any) {
+        console.error('Failed to load restaurants:', err)
+      } finally {
+        setLoadingRestaurants(false)
+      }
+    },
+    [],
+  )
+
+  const loadAllRestaurants = useCallback(async () => {
     try {
-      setLoadingRestaurants(true)
-      const data = await fetchRestaurantsByUniversity(universityId)
-      setRestaurants(data)
-    } catch (err: any) {
-      console.error('Failed to load restaurants:', err)
+      setLoadingAllRestaurants(true)
+      const data = await fetchAllRestaurants()
+      setAllRestaurants(Array.isArray(data) ? data : [])
+    } catch (err) {
+      console.error('Failed to load all restaurants', err)
+      setAllRestaurants([])
     } finally {
-      setLoadingRestaurants(false)
+      setLoadingAllRestaurants(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    // Load restaurants when university is selected
+    if (selectedUniversityId !== 'all' && selectedUniversityId) {
+      loadRestaurants(selectedUniversityId)
+      // Update restaurant form universityId if form is open
+      if (showRestaurantForm) {
+        setNewRestaurant((prev) => ({
+          ...prev,
+          universityId: selectedUniversityId,
+        }))
+      }
+    } else {
+      setRestaurants([])
+    }
+  }, [selectedUniversityId, showRestaurantForm, loadRestaurants])
+
+  useEffect(() => {
+    const section = searchParams.get('section')
+    if (
+      section === 'overview' ||
+      section === 'universities' ||
+      section === 'restaurants' ||
+      section === 'orders' ||
+      section === 'serviceFee' ||
+      section === 'reports'
+    ) {
+      setActiveSection(section)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (activeSection !== 'serviceFee') return
+    void loadServiceFeeAnalytics()
+  }, [activeSection, loadServiceFeeAnalytics])
+
+  useEffect(() => {
+    if (activeSection !== 'orders') return
+    void loadAllRestaurants()
+  }, [activeSection, loadAllRestaurants])
+
+  useEffect(() => {
+    if (activeSection !== 'reports') return
+
+    void loadGovernanceData()
+    const interval = window.setInterval(() => {
+      void loadGovernanceData()
+    }, 15000)
+
+    return () => window.clearInterval(interval)
+  }, [activeSection, loadGovernanceData])
 
   const handleEditUniversity = (university: University) => {
     setEditingUniversityId(university.id)
@@ -263,6 +408,24 @@ export default function PlatformAdminDashboard() {
     }
   }
 
+  const handleReEnableRestaurant = async (restaurantId: string) => {
+    setError('')
+    setSuccess('')
+    setReEnablingRestaurantId(restaurantId)
+    try {
+      await reEnableRestaurant(restaurantId)
+      setSuccess('Restaurant re-enabled successfully')
+      await loadGovernanceData()
+      if (selectedUniversityId !== 'all') {
+        await loadRestaurants(selectedUniversityId)
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to re-enable restaurant')
+    } finally {
+      setReEnablingRestaurantId(null)
+    }
+  }
+
   const handleAddDomain = () => {
     setNewUniversity({
       ...newUniversity,
@@ -296,10 +459,11 @@ export default function PlatformAdminDashboard() {
     } catch (error) {
       console.error('Logout error:', error)
     }
-    router.push('/')
+    router.push(APP_ROUTE.ROOT)
   }
 
   const selectedUniversity = universities.find((u) => u.id === selectedUniversityId)
+  const selectedOrdersRestaurantId = searchParams.get('restaurantId') || undefined
   const displayedUniversities =
     selectedUniversityId === 'all' ? universities : selectedUniversity ? [selectedUniversity] : []
 
@@ -307,6 +471,7 @@ export default function PlatformAdminDashboard() {
   const totalRestaurants = displayedUniversities.reduce((sum, u) => sum + (u.restaurantCount || 0), 0)
   const totalUsers = displayedUniversities.reduce((sum, u) => sum + (u.userCount || 0), 0)
   const activeUniversities = displayedUniversities.filter((u) => u.isActive).length
+  const formatCurrency = (value: number) => `${value.toFixed(2)} EGP`
 
   if (loading) {
     return (
@@ -326,6 +491,114 @@ export default function PlatformAdminDashboard() {
       </div>
 
       <div className={styles.content}>
+        <div className={styles.dashboardContainer}>
+          <main className={styles.mainContent}>
+            {error && <div className={styles.error}>{error}</div>}
+            {success && <div className={styles.success}>{success}</div>}
+
+            {activeSection === 'overview' && (
+              <>
+        {/* Global Settings */}
+        <div className={styles.section}>
+          <h2 className={styles.sectionTitle}>Global Settings</h2>
+          {globalConfig && (
+            <div className={styles.addForm}>
+              <div className={styles.checkboxContainer} style={{ marginBottom: '1rem' }}>
+                <label className={styles.label}>
+                  <input
+                    type="checkbox"
+                    checked={globalConfig.serviceFeeEnabled}
+                    onChange={(e) =>
+                      setGlobalConfig({
+                        ...globalConfig!,
+                        serviceFeeEnabled: e.target.checked,
+                      })
+                    }
+                    style={{ marginRight: '8px' }}
+                  />
+                  Enable Service Fee
+                </label>
+              </div>
+              <div style={{ marginBottom: '1rem' }}>
+                <label className={styles.label}>Service Fee Amount (EGP)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={globalConfig.serviceFeeAmount}
+                  onChange={(e) =>
+                    setGlobalConfig({
+                      ...globalConfig!,
+                      serviceFeeAmount: Number(e.target.value),
+                    })
+                  }
+                  className={styles.input}
+                  disabled={!globalConfig.serviceFeeEnabled}
+                />
+              </div>
+
+              <div className={styles.checkboxContainer} style={{ marginBottom: '1rem' }}>
+                <label className={styles.label}>
+                  <input
+                    type="checkbox"
+                    checked={globalConfig.orderingEnabled}
+                    onChange={(e) =>
+                      setGlobalConfig({
+                        ...globalConfig!,
+                        orderingEnabled: e.target.checked,
+                      })
+                    }
+                    style={{ marginRight: '8px' }}
+                  />
+                  Ordering Enabled (Uncheck to stop all new orders)
+                </label>
+              </div>
+
+              <div className={styles.checkboxContainer} style={{ marginBottom: '1rem' }}>
+                <label className={styles.label}>
+                  <input
+                    type="checkbox"
+                    checked={globalConfig.maintenanceMode}
+                    onChange={(e) =>
+                      setGlobalConfig({
+                        ...globalConfig!,
+                        maintenanceMode: e.target.checked,
+                      })
+                    }
+                    style={{ marginRight: '8px' }}
+                  />
+                  Maintenance Mode (Students see maintenance page)
+                </label>
+              </div>
+
+              {globalConfig.maintenanceMode && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label className={styles.label}>Maintenance Message</label>
+                  <input
+                    type="text"
+                    value={globalConfig.maintenanceMessage || ''}
+                    onChange={(e) =>
+                      setGlobalConfig({
+                        ...globalConfig!,
+                        maintenanceMessage: e.target.value,
+                      })
+                    }
+                    className={styles.input}
+                    placeholder="We will be back shortly..."
+                  />
+                </div>
+              )}
+              <button
+                onClick={handleUpdateConfig}
+                className={styles.submitButton}
+                disabled={savingConfig}
+              >
+                {savingConfig ? 'Saving...' : 'Save Settings'}
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* University Selector */}
         <div className={styles.restaurantSelector}>
           <label className={styles.selectorLabel}>View:</label>
@@ -375,6 +648,33 @@ export default function PlatformAdminDashboard() {
           </div>
         </div>
 
+              </>
+            )}
+
+            {activeSection === 'universities' && (
+              <>
+        {/* University Selector */}
+        <div className={styles.restaurantSelector}>
+          <label className={styles.selectorLabel}>View:</label>
+          <select
+            value={selectedUniversityId}
+            onChange={(e) => setSelectedUniversityId(e.target.value)}
+            className={styles.selectorDropdown}
+          >
+            <option value="all">All Universities</option>
+            {universities.map((university) => (
+              <option key={university.id} value={university.id}>
+                {university.name}
+              </option>
+            ))}
+          </select>
+          {selectedUniversityId !== 'all' && selectedUniversity && (
+            <p className={styles.selectedRestaurantNote}>
+              Viewing: {selectedUniversity.name}
+            </p>
+          )}
+        </div>
+
         {/* University Management */}
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
@@ -390,9 +690,6 @@ export default function PlatformAdminDashboard() {
               {showAddForm ? 'Cancel' : '+ Add University'}
             </button>
           </div>
-
-          {error && <div className={styles.error}>{error}</div>}
-          {success && <div className={styles.success}>{success}</div>}
 
           {showAddForm && (
             <div className={styles.addForm}>
@@ -538,9 +835,8 @@ export default function PlatformAdminDashboard() {
                         <div className={styles.restaurantHeader}>
                           <h3 className={styles.restaurantName}>{university.name}</h3>
                           <span
-                            className={`${styles.statusBadge} ${
-                              university.isActive ? styles.active : styles.inactive
-                            }`}
+                            className={`${styles.statusBadge} ${university.isActive ? styles.active : styles.inactive
+                              }`}
                           >
                             {university.isActive ? 'Active' : 'Inactive'}
                           </span>
@@ -572,12 +868,23 @@ export default function PlatformAdminDashboard() {
                         </button>
                         <button
                           onClick={() => handleToggleStatus(university.id, university.isActive)}
-                          className={`${styles.toggleButton} ${
-                            university.isActive ? styles.disableButton : styles.enableButton
-                          }`}
+                          className={`${styles.toggleButton} ${university.isActive ? styles.disableButton : styles.enableButton
+                            }`}
                         >
                           {university.isActive ? 'Disable' : 'Enable'}
                         </button>
+                        {university.restaurantCount! > 0 && (
+                          <button
+                            onClick={() => {
+                              setSelectedUniversityId(university.id)
+                              setActiveSection('restaurants')
+                            }}
+                            className={styles.toggleButton}
+                            style={{ background: '#48bb78', marginLeft: '8px' }}
+                          >
+                            View Restaurants
+                          </button>
+                        )}
                       </div>
                     </>
                   )}
@@ -587,8 +894,35 @@ export default function PlatformAdminDashboard() {
           </div>
         </div>
 
+              </>
+            )}
+
+            {activeSection === 'restaurants' && (
+              <>
+        {/* University Selector */}
+        <div className={styles.restaurantSelector}>
+          <label className={styles.selectorLabel}>View:</label>
+          <select
+            value={selectedUniversityId}
+            onChange={(e) => setSelectedUniversityId(e.target.value)}
+            className={styles.selectorDropdown}
+          >
+            <option value="all">All Universities</option>
+            {universities.map((university) => (
+              <option key={university.id} value={university.id}>
+                {university.name}
+              </option>
+            ))}
+          </select>
+          {selectedUniversityId !== 'all' && selectedUniversity && (
+            <p className={styles.selectedRestaurantNote}>
+              Viewing: {selectedUniversity.name}
+            </p>
+          )}
+        </div>
+
         {/* Restaurant Management (shown when university is selected) */}
-        {selectedUniversityId !== 'all' && selectedUniversity && (
+        {selectedUniversityId !== 'all' && selectedUniversity ? (
           <div className={styles.section}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
@@ -692,20 +1026,193 @@ export default function PlatformAdminDashboard() {
                           <strong>Phone:</strong> {restaurant.responsiblePhone}
                         </p>
                         <p className={styles.detailItem}>
-                          <strong>Admins:</strong> {restaurant._count?.users || 0}
-                        </p>
-                        <p className={styles.detailItem}>
-                          <strong>Created:</strong>{' '}
-                          {new Date(restaurant.createdAt).toLocaleDateString()}
+                          <strong>Users:</strong> {restaurant._count?.users || 0}
                         </p>
                       </div>
+                    </div>
+                    <div className={styles.restaurantActions}>
+                      <button
+                        onClick={() => {
+                          setActiveSection('orders')
+                          router.push(`/admin/dashboard?section=orders&restaurantId=${restaurant.id}`)
+                        }}
+                        className={styles.toggleButton}
+                        style={{ background: '#48bb78' }}
+                      >
+                        View Monthly Orders
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+        ) : (
+          <div className={styles.section}>
+            <h2 className={styles.sectionTitle}>Restaurants</h2>
+            <p className={styles.infoText}>
+              Select a university from the dropdown to manage its restaurants.
+            </p>
+          </div>
         )}
+              </>
+            )}
+
+            {activeSection === 'orders' && (
+              loadingAllRestaurants ? (
+                <div className={styles.section}>
+                  <p className={styles.infoText}>Loading restaurants...</p>
+                </div>
+              ) : (
+                <AdminMonthlyOrdersPanel
+                  restaurants={allRestaurants}
+                  initialRestaurantId={selectedOrdersRestaurantId}
+                />
+              )
+            )}
+
+            {activeSection === 'serviceFee' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>Service Fee Accounting</h2>
+                {loadingServiceFeeAnalytics ? (
+                  <p className={styles.infoText}>Loading service fee analytics...</p>
+                ) : serviceFeeAnalytics && !serviceFeeAnalytics.serviceFeeEnabled ? (
+                  <div className={styles.serviceFeeInfoBanner}>
+                    Service fee is currently disabled. No platform revenue is being collected.
+                  </div>
+                ) : !serviceFeeAnalytics ? (
+                  <p className={styles.infoText}>Unable to load service fee analytics right now.</p>
+                ) : serviceFeeAnalytics.restaurants.length === 0 ? (
+                  <p className={styles.infoText}>No restaurants found for service fee accounting.</p>
+                ) : (
+                  <div className={styles.serviceFeeCards}>
+                    {serviceFeeAnalytics.restaurants.map((restaurant) => (
+                      <div key={restaurant.restaurantId} className={styles.serviceFeeCard}>
+                        <h3 className={styles.restaurantName}>{restaurant.restaurantName}</h3>
+                        <div className={styles.serviceFeeMetricsGrid}>
+                          <div className={styles.analyticsMetricCard}>
+                            <span className={styles.metricLabel}>Lifetime Fees</span>
+                            <strong className={styles.metricValue}>
+                              {formatCurrency(restaurant.totalServiceFeeLifetime)}
+                            </strong>
+                          </div>
+                          <div className={styles.analyticsMetricCard}>
+                            <span className={styles.metricLabel}>Current Month Fees</span>
+                            <strong className={styles.metricValue}>
+                              {formatCurrency(restaurant.totalServiceFeeCurrentMonth)}
+                            </strong>
+                          </div>
+                          <div className={styles.analyticsMetricCard}>
+                            <span className={styles.metricLabel}>CARD Fees</span>
+                            <strong className={styles.metricValue}>
+                              {formatCurrency(restaurant.totalCardFees)}
+                            </strong>
+                          </div>
+                          <div className={styles.analyticsMetricCard}>
+                            <span className={styles.metricLabel}>Orders Count</span>
+                            <strong className={styles.metricValue}>
+                              {restaurant.contributingOrdersCount}
+                            </strong>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeSection === 'reports' && (
+              <div className={styles.section}>
+                <h2 className={styles.sectionTitle}>Escalated Reports</h2>
+                {loadingGovernance ? (
+                  <p className={styles.infoText}>Loading governance alerts...</p>
+                ) : escalatedReports.length === 0 ? (
+                  <p className={styles.infoText}>No escalated reports right now.</p>
+                ) : (
+                  <div className={styles.restaurantsList}>
+                    {escalatedReports.map((report) => (
+                      <article key={report.id} className={styles.restaurantCard}>
+                        <div className={styles.restaurantInfo}>
+                          <div className={styles.restaurantHeader}>
+                            <h3 className={styles.restaurantName}>{report.restaurant.name}</h3>
+                            <span className={`${styles.statusBadge} ${styles.disabled}`}>Escalated</span>
+                          </div>
+                          <p className={styles.detailItem}>
+                            <strong>Type:</strong> {report.type}
+                          </p>
+                          <p className={styles.detailItem}>
+                            <strong>Student:</strong> {report.student.name || report.student.email}
+                          </p>
+                          {report.order?.orderNumber ? (
+                            <p className={styles.detailItem}>
+                              <strong>Order:</strong> #{report.order.orderNumber}
+                            </p>
+                          ) : null}
+                          {report.comment ? (
+                            <p className={styles.detailItem}>
+                              <strong>Comment:</strong> {report.comment}
+                            </p>
+                          ) : null}
+                          <p className={styles.detailItem}>
+                            <strong>Escalated At:</strong> {new Date(report.updatedAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+
+                <h2 className={styles.sectionTitle} style={{ marginTop: '28px' }}>
+                  Auto Disabled Restaurants
+                </h2>
+                {loadingGovernance ? (
+                  <p className={styles.infoText}>Loading auto-disable alerts...</p>
+                ) : autoDisabledRestaurants.length === 0 ? (
+                  <p className={styles.infoText}>No auto-disabled restaurants right now.</p>
+                ) : (
+                  <div className={styles.restaurantsList}>
+                    {autoDisabledRestaurants.map((restaurant) => (
+                      <article key={restaurant.id} className={styles.restaurantCard}>
+                        <div className={styles.restaurantInfo}>
+                          <div className={styles.restaurantHeader}>
+                            <h3 className={styles.restaurantName}>{restaurant.name}</h3>
+                            <span className={`${styles.statusBadge} ${styles.disabled}`}>Auto Disabled</span>
+                          </div>
+                          <p className={styles.detailItem}>
+                            <strong>University:</strong> {restaurant.university.name}
+                          </p>
+                          <p className={styles.detailItem}>
+                            <strong>Trigger Type:</strong> {restaurant.reasonType}
+                          </p>
+                          <p className={styles.detailItem}>
+                            <strong>Unique Students:</strong> {restaurant.uniqueStudents}
+                          </p>
+                          <p className={styles.detailItem}>{restaurant.reasonMessage}</p>
+                          <p className={styles.detailItem}>
+                            <strong>Disabled At:</strong> {new Date(restaurant.disabledAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className={styles.restaurantActions}>
+                          <button
+                            type="button"
+                            className={`${styles.toggleButton} ${styles.enableButton}`}
+                            disabled={reEnablingRestaurantId === restaurant.id}
+                            onClick={() => void handleReEnableRestaurant(restaurant.id)}
+                          >
+                            {reEnablingRestaurantId === restaurant.id
+                              ? 'Re-enabling...'
+                              : 'Re-enable Restaurant'}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
       </div>
     </div>
   )

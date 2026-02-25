@@ -1,0 +1,123 @@
+.wrapper {
+  position: relative;
+}
+
+.button {
+  border: 1px solid #d6dcf5;
+  background: #ffffff;
+  color: #24304a;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #e53935;
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 340px;
+  max-height: 420px;
+  overflow: auto;
+  background: #ffffff;
+  border: 1px solid #d6dcf5;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(16, 31, 61, 0.12);
+  z-index: 20;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #eef1fb;
+}
+
+.title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  padding: 12px;
+  border-bottom: 1px solid #eef1fb;
+}
+
+.itemUnread {
+  background: #f6f8ff;
+}
+
+.itemTitle {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.itemMessage {
+  margin: 0;
+  font-size: 12px;
+  color: #4a5672;
+}
+
+.itemMeta {
+  margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.time {
+  font-size: 11px;
+  color: #6f7b98;
+}
+
+.markReadButton {
+  border: none;
+  background: #1a4af7;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.empty {
+  padding: 16px 12px;
+  margin: 0;
+  font-size: 13px;
+  color: #6f7b98;
+}
+
+.footer {
+  display: block;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  color: #1a4af7;
+  text-decoration: none;
+}

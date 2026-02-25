@@ -1,0 +1,90 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(3px);
+  animation: fadeIn 220ms ease;
+}
+
+.progressTrack {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 2px;
+  background: rgba(148, 163, 184, 0.22);
+  overflow: hidden;
+}
+
+.progressBar {
+  display: block;
+  width: 45%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+  animation: progressSlide 1.1s ease-in-out infinite;
+}
+
+.loaderCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #dbeafe;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.loadingLogo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  opacity: 0.9;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes progressSlide {
+  0% {
+    transform: translateX(-110%);
+  }
+  50% {
+    transform: translateX(70%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.65;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .loadingLogo,
+  .progressBar {
+    animation: none;
+  }
+}

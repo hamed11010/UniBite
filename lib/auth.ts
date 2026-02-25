@@ -7,8 +7,12 @@ export interface AuthUser {
   id: string
   email: string
   role: 'SUPER_ADMIN' | 'RESTAURANT_ADMIN' | 'STUDENT'
+  name?: string | null
+  phone?: string | null
+  language?: 'en' | 'ar'
   universityId?: string
   isVerified: boolean
+  restaurantId?: string
 }
 
 /**
@@ -22,8 +26,12 @@ export async function checkAuth(): Promise<AuthUser | null> {
       id: user.id,
       email: user.email,
       role: user.role.toUpperCase() as 'SUPER_ADMIN' | 'RESTAURANT_ADMIN' | 'STUDENT',
+      name: user.name,
+      phone: user.phone,
+      language: user.language,
       universityId: user.universityId,
       isVerified: user.isVerified,
+      restaurantId: user.restaurantId,
     }
   } catch (error) {
     return null
@@ -36,4 +44,10 @@ export async function checkAuth(): Promise<AuthUser | null> {
 export function hasRole(user: AuthUser | null, requiredRole: 'SUPER_ADMIN' | 'RESTAURANT_ADMIN' | 'STUDENT'): boolean {
   if (!user) return false
   return user.role === requiredRole
+}
+
+export function getInitialLanguageForUser(
+  user: Pick<AuthUser, 'language'>,
+): 'en' | 'ar' {
+  return user.language === 'ar' ? 'ar' : 'en'
 }

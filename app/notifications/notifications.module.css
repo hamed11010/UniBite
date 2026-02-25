@@ -1,0 +1,104 @@
+.page {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #1d2640;
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.unreadBadge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: #edf1ff;
+  color: #1d3fbf;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.refreshButton {
+  border: 1px solid #d7ddf6;
+  background: #ffffff;
+  color: #1d2640;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e4e9fa;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.item {
+  padding: 16px;
+  border-bottom: 1px solid #edf1fb;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.itemUnread {
+  background: #f7f9ff;
+}
+
+.itemTitle {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.itemMessage {
+  margin: 0 0 8px;
+  color: #4e5975;
+  font-size: 14px;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.time {
+  font-size: 12px;
+  color: #6e7996;
+}
+
+.markReadButton {
+  border: none;
+  background: #1b49f5;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.empty {
+  padding: 18px;
+  border: 1px solid #e4e9fa;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #6e7996;
+}

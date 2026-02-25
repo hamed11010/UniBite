@@ -142,6 +142,95 @@
   text-align: center;
 }
 
+.paymentSection {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 14px;
+}
+
+.paymentOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: #333;
+  font-weight: 500;
+}
+
+.paymentOption input {
+  width: 16px;
+  height: 16px;
+}
+
+.cardForm {
+  margin-top: 14px;
+  border-top: 1px solid #ececf8;
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputGroup label {
+  font-size: 14px;
+  color: #555;
+  font-weight: 600;
+}
+
+.inputGroup input,
+.inputGroup select {
+  border: 1px solid #d8d8e2;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+}
+
+.inputGroup input:focus,
+.inputGroup select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.inputError {
+  color: #d14343;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.secureNote {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #4b5f9c;
+  background: #eef2ff;
+  border: 1px solid #d9e1ff;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
 .summary {
   background: white;
   border-radius: 12px;
@@ -181,6 +270,13 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
+.checkoutButton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .empty {
   text-align: center;
   padding: 60px 20px;
@@ -199,4 +295,10 @@
   border-radius: 8px;
   font-size: 16px;
   font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
 }

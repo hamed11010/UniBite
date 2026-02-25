@@ -1,22 +1,38 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { resendVerificationCode, verifyEmailCode } from '@/lib/api'
 import styles from '../login/auth.module.css'
 
 export default function VerifyAccountPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [code, setCode] = useState(['', '', '', '', '', ''])
+  const [email, setEmail] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   const [verified, setVerified] = useState(false)
 
+  useEffect(() => {
+    setEmail(searchParams.get('email')?.trim() || '')
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!verified) return
+    const timer = window.setTimeout(() => {
+      router.push('/auth/login')
+    }, 1500)
+    return () => window.clearTimeout(timer)
+  }, [verified, router])
+
   const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) return
+    if (!/^\d?$/.test(value)) return
     const newCode = [...code]
     newCode[index] = value
     setCode(newCode)
 
-    // Auto-focus next input
     if (value && index < 5) {
       const nextInput = document.getElementById(`code-${index + 1}`)
       nextInput?.focus()
@@ -30,12 +46,50 @@ export default function VerifyAccountPage() {
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
     const fullCode = code.join('')
-    if (fullCode.length === 6) {
-      // Mock verification - UI only, no backend logic
+
+    if (!email) {
+      setError('Email is required')
+      return
+    }
+
+    if (fullCode.length !== 6) {
+      setError('Please enter the 6-digit code')
+      return
+    }
+
+    setLoading(true)
+    try {
+      await verifyEmailCode(email, fullCode)
       setVerified(true)
+    } catch (err: any) {
+      setError(err.message || 'Verification failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    setError('')
+    if (!email) {
+      setError('Email is required to resend the code')
+      return
+    }
+
+    try {
+      await resendVerificationCode(email)
+      const Swal = (await import('sweetalert2')).default
+      await Swal.fire({
+        icon: 'success',
+        title: 'Verification Code Sent',
+        text: 'A new verification code has been sent to your email.',
+        confirmButtonText: 'OK',
+      })
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend verification code')
     }
   }
 
@@ -65,8 +119,24 @@ export default function VerifyAccountPage() {
         <p className={styles.subtitle}>
           Enter the verification code sent to your email
         </p>
+        <p className={styles.infoText}>{email || 'Enter your email below'}</p>
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          {error && <div className={styles.error}>{error}</div>}
+          {!email && (
+            <div className={styles.inputGroup}>
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+          )}
+
           <div className={styles.codeInputGroup}>
             {code.map((digit, index) => (
               <input
@@ -84,15 +154,17 @@ export default function VerifyAccountPage() {
             ))}
           </div>
 
-          <button type="submit" className={styles.submitButton}>
-            Verify Account
+          <button type="submit" className={styles.submitButton} disabled={loading}>
+            {loading ? 'Verifying...' : 'Verify Account'}
           </button>
         </form>
 
         <p className={styles.switchText}>
-          Didn't receive the code?{' '}
+          Didn&apos;t receive the code?{' '}
           <button
-            onClick={() => alert('Resend code functionality would be implemented here')}
+            onClick={() => {
+              void handleResend()
+            }}
             className={styles.linkButton}
           >
             Resend

@@ -1,305 +1,228 @@
-# Project Structure
+# Project Structure (Current)
 
-This document describes the folder and file structure of the UniBite frontend application.
+This document reflects the current structure in `c:\Users\ahmed\Desktop\UniBite`.
 
-## Root Directory
+## Root
 
-```
+```text
 UniBite/
-├── app/                    # Next.js App Router directory
-├── lib/                    # Shared utilities and data
-├── public/                 # Static assets
-├── package.json           # Project dependencies
-├── tsconfig.json          # TypeScript configuration
-├── next.config.js         # Next.js configuration
-├── .gitignore            # Git ignore rules
-├── PROMPT_LOG.md         # Prompt implementation log
-├── PROJECT_STRUCTURE.md   # This file
-└── MANUAL_ACTIONS.md     # Manual setup instructions
+|- .github/
+|- .next/                      (build output)
+|- app/                        (Next.js App Router frontend)
+|- backend/                    (NestJS + Prisma backend)
+|- components/                 (shared frontend components)
+|- lib/                        (frontend API/auth utilities)
+|- node_modules/               (dependencies)
+|- public/                     (static assets)
+|- .dockerignore
+|- .env.local
+|- .eslintrc.json
+|- .gitignore
+|- dockerfile
+|- FILES_CHECKLIST.md
+|- MANUAL_ACTIONS.md
+|- next-env.d.ts
+|- next.config.js
+|- package-lock.json
+|- package-project.ps1
+|- package.json
+|- PROJECT_STRUCTURE.md
+|- PROMPT_LOG.md
+|- README.md
+|- tsconfig.json
+\- tsconfig.tsbuildinfo
 ```
 
-## App Directory (`app/`)
+## Frontend (`app/`)
 
-Next.js App Router structure. Each folder represents a route.
-
-### Root Layout
-- `layout.tsx` - Root layout component with PWA meta tags
-- `globals.css` - Global CSS styles
-- `page.tsx` - University Selection page (landing page)
-
-### Authentication Routes (`app/auth/`)
-- `login/page.tsx` - Login page component
-- `signup/page.tsx` - Signup page component
-- `login/auth.module.css` - Shared styles for auth pages
-
-### Student Routes (`app/student/`)
-- `home/page.tsx` - Student home page with restaurant listings
-- `home/home.module.css` - Student home styles
-- `restaurant/[id]/page.tsx` - Restaurant menu page (dynamic route)
-- `restaurant/[id]/menu.module.css` - Menu page styles
-- `cart/page.tsx` - Shopping cart page
-- `cart/cart.module.css` - Cart page styles
-- `order/[id]/page.tsx` - Order status tracking page (dynamic route)
-- `order/[id]/order.module.css` - Order status styles
-
-### Restaurant Admin Routes (`app/restaurant/`)
-- `dashboard/page.tsx` - Restaurant admin dashboard
-- `dashboard/dashboard.module.css` - Dashboard styles
-
-### Platform Admin Routes (`app/admin/`)
-- `dashboard/page.tsx` - Platform admin dashboard
-- `dashboard/admin.module.css` - Admin dashboard styles
-
-## Library Directory (`lib/`)
-
-Shared utilities and mock data.
-
-- `mockData.ts` - Mock data for restaurants, products, orders, and TypeScript interfaces
-- `api.ts` - API utility functions for backend communication (universities, auth)
-
-## Public Directory (`public/`)
-
-Static assets served at the root URL.
-
-- `manifest.json` - PWA manifest file for app installation
-
-## Key Features by Route
-
-### `/` (Root)
-- University selection screen
-- Only MIU is active, others show "Coming soon"
-
-### `/auth/login` & `/auth/signup`
-- Email/password authentication
-- Only @miuegypt.edu.eg emails allowed
-- Mock authentication using sessionStorage
-
-### `/student/home`
-- Lists all restaurants
-- Shows open/closed status
-- Displays "Opens at X" for closed restaurants
-
-### `/student/restaurant/[id]`
-- Menu grouped by categories
-- Product cards with images (placeholders)
-- Modal for adding items to cart with:
-  - Quantity selector
-  - Sauce selection (if enabled)
-  - Optional comment field
-
-### `/student/cart`
-- View cart items
-- Adjust quantities
-- Remove items
-- Warning about non-editable orders
-- Checkout button
-
-### `/student/order/[id]`
-- Order status display
-- Status updates: received → preparing → ready
-- Estimated time display
-- Order details with items and total
-
-### `/restaurant/dashboard`
-- Three tabs: Orders, Menu Management, Settings
-- Orders: View incoming orders, update status, cancel orders
-- Menu: Placeholder for menu management (future implementation)
-- Settings: Open/close toggle, working hours
-
-### `/admin/dashboard`
-- University-first Super Admin dashboard
-- View all universities with stats (restaurant count, user count)
-- Select specific university or "All Universities"
-- Add new university (name + allowed email domains)
-- Edit existing university (name, email domains)
-- Enable/disable universities
-- University statistics (total universities, active universities, total restaurants, total users)
-- Restaurant management (when university selected):
-  - Create restaurant with admin account
-  - View restaurants for selected university
-  - Restaurant details (name, responsible person, phone, admin count)
-
-## State Management
-
-**Authentication:**
-- Uses httpOnly cookies exclusively (no sessionStorage for auth)
-- `/auth/me` is the single source of truth for auth state
-
-**SessionStorage (non-auth data only):**
-- Selected university (for UI state)
-- Shopping cart
-- Orders
-- Reports (demo mode)
-
-## Styling Approach
-
-- CSS Modules for component-scoped styles
-- Global styles in `globals.css`
-- Consistent color scheme: Purple gradient (#667eea to #764ba2)
-- Responsive design with mobile-first approach
-
-## Data Flow
-
-1. **Authentication**: User selects university → logs in → role determined → redirected to appropriate dashboard
-2. **Student Flow**: Browse restaurants → View menu → Add to cart → Checkout → Track order
-3. **Restaurant Flow**: View orders → Update status → Manage menu (future) → Adjust settings
-4. **Admin Flow**: Manage universities → View stats → Add/Enable/Disable universities → (Restaurant management coming in future)
-
----
-
-## Backend Structure (`backend/`)
-
-NestJS backend application with PostgreSQL database.
-
-### Root Directory
-
+```text
+app/
+|- admin/
+|  \- dashboard/
+|     |- admin.module.css
+|     \- page.tsx
+|- auth/
+|  |- forgot-password/
+|  |  \- page.tsx
+|  |- login/
+|  |  |- auth.module.css
+|  |  \- page.tsx
+|  |- signup/
+|  |  \- page.tsx
+|  \- verify/
+|     \- page.tsx
+|- maintenance/
+|  \- page.tsx
+|- restaurant/
+|  \- dashboard/
+|     |- dashboard.module.css
+|     \- page.tsx
+|- student/
+|  |- cart/
+|  |  |- cart.module.css
+|  |  \- page.tsx
+|  |- home/
+|  |  |- home.module.css
+|  |  \- page.tsx
+|  |- order/
+|  |  \- [id]/
+|  |     |- order.module.css
+|  |     \- page.tsx
+|  |- restaurant/
+|  |  \- [id]/
+|  |     |- menu.module.css
+|  |     \- page.tsx
+|  \- layout.tsx
+|- globals.css
+|- layout.tsx
+|- page.module.css
+\- page.tsx
 ```
+
+## Public Assets (`public/`)
+
+```text
+public/
+|- apple-touch-icon.png
+|- favicon-16x16.png
+|- favicon-32x32.png
+|- logo-full.svg
+\- logo-icon.svg
+```
+
+## Frontend Shared
+
+```text
+components/
+\- RestaurantOrdersView.tsx
+
+lib/
+|- api.ts
+|- auth.ts
+\- mockData.ts
+```
+
+## Backend (`backend/`)
+
+```text
 backend/
-├── src/                    # Source code
-├── prisma/                 # Prisma schema and migrations
-├── test/                   # E2E tests
-├── docker-compose.yml      # PostgreSQL Docker configuration
-├── package.json           # Backend dependencies
-├── tsconfig.json          # TypeScript configuration
-├── prisma.config.ts       # Prisma configuration
-└── README.md              # Backend documentation
+|- dist/                       (compiled backend output)
+|- node_modules/
+|- prisma/
+|  |- migrations/
+|  |  |- migration_lock.toml
+|  |  |- 20260202021453_init_auth/
+|  |  |- 20260203032855_add_university_model/
+|  |  |- 20260206082350_add_menu_models/
+|  |  |- 20260210135042_add_restaurant_open_close_state/
+|  |  |- 20260213130718_add_max_concurrent_orders/
+|  |  |- 20260213131519_add_orders/
+|  |  |- 20260213142708_add_global_config/
+|  |  |- 20260213150730_add_report_system/
+|  |  |- 20260213155226_add_disabled_at_to_restaurant/
+|  |  |- 20260217141000_add_order_cancellation_and_refund_fields/
+|  |  |- 20260217152000_payment_method_backend_foundation/
+|  |  \- 20260217170000_add_pos_order_number/
+|  \- schema.prisma
+|- src/
+|  |- auth/
+|  |  |- dto/
+|  |  |  |- login.dto.ts
+|  |  |  \- signup.dto.ts
+|  |  |- strategies/
+|  |  |  \- jwt.strategy.ts
+|  |  |- auth.controller.ts
+|  |  |- auth.module.ts
+|  |  \- auth.service.ts
+|  |- common/
+|  |  |- decorators/
+|  |  |  \- roles.decorator.ts
+|  |  \- guards/
+|  |     |- jwt-auth.guard.ts
+|  |     |- restaurant-owner.guard.ts
+|  |     \- roles.guard.ts
+|  |- config/
+|  |  |- dto/
+|  |  |  \- update-config.dto.ts
+|  |  |- config.controller.ts
+|  |  |- config.module.ts
+|  |  \- config.service.ts
+|  |- menu/
+|  |  |- dto/
+|  |  |  |- create-category.dto.ts
+|  |  |  |- create-product.dto.ts
+|  |  |  |- update-category.dto.ts
+|  |  |  \- update-product.dto.ts
+|  |  |- menu.controller.ts
+|  |  |- menu.module.ts
+|  |  \- menu.service.ts
+|  |- order/
+|  |  |- dto/
+|  |  |  |- cancel-order-by-restaurant.dto.ts
+|  |  |  |- create-order.dto.ts
+|  |  |  |- update-order-pos.dto.ts
+|  |  |  \- update-order-status.dto.ts
+|  |  |- order.controller.ts
+|  |  |- order.module.ts
+|  |  \- order.service.ts
+|  |- prisma/
+|  |  |- prisma.module.ts
+|  |  \- prisma.service.ts
+|  |- report/
+|  |  |- dto/
+|  |  |  \- create-report.dto.ts
+|  |  |- report.controller.ts
+|  |  |- report.module.ts
+|  |  \- report.service.ts
+|  |- restaurant/
+|  |  |- dto/
+|  |  |  |- create-restaurant.dto.ts
+|  |  |  \- update-restaurant-settings.dto.ts
+|  |  |- restaurant.controller.ts
+|  |  |- restaurant.module.ts
+|  |  |- restaurant.service.spec.ts
+|  |  \- restaurant.service.ts
+|  |- university/
+|  |  |- dto/
+|  |  |  |- create-university.dto.ts
+|  |  |  \- update-university.dto.ts
+|  |  |- university.controller.ts
+|  |  |- university.module.ts
+|  |  \- university.service.ts
+|  |- users/
+|  |  |- dto/
+|  |  |  \- create-user.dto.ts
+|  |  |- users.module.ts
+|  |  \- users.service.ts
+|  |- app.controller.spec.ts
+|  |- app.controller.ts
+|  |- app.module.ts
+|  |- app.service.ts
+|  \- main.ts
+|- test/
+|- .env
+|- .gitignore
+|- .prettierrc
+|- docker-compose.yml
+|- eslint.config.mjs
+|- migration_output.txt
+|- migration_output_2.txt
+|- nest-cli.json
+|- package-lock.json
+|- package.json
+|- prismaschema.prisma
+|- README.md
+|- test_output.txt
+|- test_output_2.txt
+|- tsconfig.build.json
+\- tsconfig.json
 ```
 
-### Source Directory (`src/`)
+## Notes
 
-#### Authentication Module (`src/auth/`)
-- `auth.controller.ts` - Authentication endpoints (signup, login, logout, me)
-- `auth.service.ts` - Authentication business logic
-- `auth.module.ts` - Auth module configuration
-- `dto/` - Data transfer objects:
-  - `signup.dto.ts` - Student signup validation
-  - `login.dto.ts` - Login validation
-- `strategies/` - Passport strategies:
-  - `jwt.strategy.ts` - JWT token validation from cookies
-
-#### Users Module (`src/users/`)
-- `users.service.ts` - User CRUD operations with password hashing
-- `users.module.ts` - Users module configuration
-- `dto/` - Data transfer objects:
-  - `create-user.dto.ts` - User creation validation
-
-#### University Module (`src/university/`)
-- `university.service.ts` - University CRUD operations, email domain validation, and aggregated stats (restaurantCount, userCount)
-- `university.controller.ts` - University endpoints (public active list, Super Admin management with stats)
-- `university.module.ts` - University module configuration
-- `dto/` - Data transfer objects:
-  - `create-university.dto.ts` - University creation validation
-  - `update-university.dto.ts` - University update validation
-
-#### Restaurant Module (`src/restaurant/`)
-- `restaurant.service.ts` - Restaurant CRUD operations and restaurant admin account creation
-- `restaurant.controller.ts` - Restaurant endpoints (Super Admin only)
-- `restaurant.module.ts` - Restaurant module configuration
-- `dto/` - Data transfer objects:
-  - `create-restaurant.dto.ts` - Restaurant creation validation (includes admin credentials)
-
-#### Menu Module (`src/menu/`)
-- `menu.service.ts` - Menu CRUD operations (categories, products, extras) with stock management
-- `menu.controller.ts` - Menu endpoints (RESTAURANT_ADMIN for management, public for viewing)
-- `menu.module.ts` - Menu module configuration
-- `dto/` - Data transfer objects:
-  - `create-category.dto.ts` - Category creation validation
-  - `update-category.dto.ts` - Category update validation
-  - `create-product.dto.ts` - Product creation validation (includes extras)
-  - `update-product.dto.ts` - Product update validation (includes extras)
-
-#### Prisma Module (`src/prisma/`)
-- `prisma.service.ts` - Prisma Client service (database connection)
-- `prisma.module.ts` - Global Prisma module
-
-#### Common Utilities (`src/common/`)
-- `guards/` - Route guards:
-  - `jwt-auth.guard.ts` - JWT authentication guard
-  - `roles.guard.ts` - Role-based access control guard
-  - `restaurant-owner.guard.ts` - Restaurant ownership guard (enforces restaurant admins can only access their restaurant)
-- `decorators/` - Custom decorators:
-  - `roles.decorator.ts` - `@Roles()` decorator for route protection
-
-#### Application Files
-- `app.module.ts` - Root application module
-- `main.ts` - Application entry point (bootstrap, CORS, cookies, validation)
-- `app.controller.ts` - Default controller
-- `app.service.ts` - Default service
-
-### Prisma Directory (`prisma/`)
-
-- `schema.prisma` - Database schema definition
-  - User model with roles (STUDENT, RESTAURANT_ADMIN, SUPER_ADMIN), universityId, restaurantId, isVerified
-  - University model with name, allowedEmailDomains (array), isActive
-  - Restaurant model with name, universityId, responsibleName, responsiblePhone
-  - Category model with name, restaurantId
-  - Product model with name, price, description, hasStock, stockQuantity, stockThreshold, manuallyOutOfStock, categoryId, restaurantId
-  - ProductExtra model with name, price, productId
-- `migrations/` - Database migration files (generated)
-
-### Key Backend Features
-
-#### Authentication System
-- JWT-based authentication
-- httpOnly cookies for token storage
-- Password hashing with bcrypt
-- Role-based access control (RBAC)
-
-#### Database
-- PostgreSQL via Docker
-- Prisma ORM
-- UUID primary keys
-- Timestamps (createdAt)
-
-#### API Endpoints
-
-**Authentication:**
-- `POST /auth/signup` - Student registration (requires universityId)
-- `POST /auth/login` - User login (sets JWT cookie)
-- `POST /auth/logout` - Clear authentication cookie
-- `GET /auth/me` - Get current user (protected)
-
-**University (Public):**
-- `GET /university/active` - Get active universities (no auth required)
-
-**University (Super Admin Only):**
-- `POST /university` - Create university
-- `GET /university` - List all universities with stats (restaurantCount, userCount) (with optional includeInactive query)
-- `GET /university/:id` - Get single university with stats
-- `PUT /university/:id` - Update university (name, allowedEmailDomains)
-- `PUT /university/:id/status` - Enable/disable university
-
-**Restaurant (Super Admin Only):**
-- `POST /restaurant` - Create restaurant with restaurant admin account
-- `GET /restaurant` - List all restaurants
-- `GET /restaurant/university/:universityId` - Get restaurants by university
-- `GET /restaurant/:id` - Get single restaurant
-
-**Menu (Public):**
-- `GET /menu/restaurant/:restaurantId` - Get public menu for students (no stock numbers, only availability)
-
-**Menu (Restaurant Admin Only):**
-- `POST /menu/category` - Create category
-- `GET /menu/category` - List categories for restaurant
-- `PUT /menu/category/:id` - Update category
-- `DELETE /menu/category/:id` - Delete category (cascades to products)
-- `POST /menu/product` - Create product with extras
-- `GET /menu/product` - List products for restaurant
-- `GET /menu/product/:id` - Get single product
-- `PUT /menu/product/:id` - Update product with extras
-- `DELETE /menu/product/:id` - Delete product (cascades to extras)
-
-#### Security
-- Input validation (class-validator)
-- CORS configuration
-- Secure cookie settings
-- Password hashing (bcrypt, 10 rounds)
-
-### Environment Variables
-
-Required in `backend/.env`:
-- `DATABASE_URL` - PostgreSQL connection string
-- `JWT_SECRET` - Secret key for JWT signing
-- `NODE_ENV` - Environment (development/production)
-- `PORT` - Server port (default: 4000)
-- `FRONTEND_URL` - Frontend origin for CORS
+- The folder map above is documentation only and does not change architecture.
+- Generated/runtime folders (`.next`, `node_modules`, `backend/dist`) are included for completeness.
+- Current major backend domain modules: `auth`, `university`, `restaurant`, `menu`, `order`, `report`, `config`.
+- Prompt 19 update (February 17, 2026): added Prisma migration for payment enum transition (`DEMO -> COUNTER`) and secure `cardLast4` storage.
+- Prompt 21 update (February 17, 2026): added `Order.posOrderNumber` migration and a new order DTO for POS reference updates.
+- Prompt 27 branding update (February 20, 2026): normalized browser/tab assets in `public/` and wired icon metadata in `app/layout.tsx`.
